@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pay Per Item Manager – CSV Review &amp; Duplicate Detection</title>
+<meta name="description" content="Import Pay Per Item CSV reports, detect duplicate Interaction IDs, review groups, filter, edit and export. Runs entirely in your browser.">
+<meta name="theme-color" content="#2563EB">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3.5' y='3' width='15' height='19' rx='2.5' fill='%23DBEAFE' stroke='%232563EB' stroke-width='1.8'/%3E%3Crect x='9.5' y='8' width='15' height='19' rx='2.5' fill='%23fff' stroke='%232563EB' stroke-width='1.8'/%3E%3Cpath d='M13 13h8M13 17h5' stroke='%232563EB' stroke-width='1.8' stroke-linecap='round'/%3E%3Ccircle cx='23' cy='23' r='4.6' fill='%232563EB' stroke='%23fff' stroke-width='1.6'/%3E%3Cpath d='M26.4 26.4l3 3' stroke='%232563EB' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#F6F7F9;--surface:#FFFFFF;--surface-2:#F9FAFB;--primary:#2563EB;--primary-h:#1D4ED8;--primary-soft:#EFF6FF;
+  --text:#111827;--muted:#6B7280;--border:#E5E7EB;--border-2:#D1D5DB;
+  --dup:#16A34A;--dup-soft:#DCFCE7;--bad:#DC2626;--bad-soft:#FEF2F2;--ok:#16A34A;--ok-soft:#F0FDF4;--warn:#D97706;--warn-soft:#FFFBEB;
+  --row-alt:#FAFBFC;--hover:#F1F5FF;--shadow:0 1px 2px rgba(16,24,40,.05),0 1px 3px rgba(16,24,40,.06);
+  --shadow-lg:0 16px 40px rgba(16,24,40,.18);--radius:12px;color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --bg:#0E1117;--surface:#161A22;--surface-2:#1B2029;--primary:#3B82F6;--primary-h:#60A5FA;--primary-soft:rgba(59,130,246,.14);
+  --text:#E6E8EC;--muted:#9AA3B2;--border:#272D39;--border-2:#363D4C;
+  --dup:#4ADE80;--dup-soft:rgba(74,222,128,.14);--bad:#F87171;--bad-soft:rgba(248,113,113,.13);--ok:#4ADE80;--ok-soft:rgba(74,222,128,.12);--warn:#FBBF24;--warn-soft:rgba(251,191,36,.12);
+  --row-alt:#191E27;--hover:#1E2635;--shadow:0 1px 2px rgba(0,0,0,.4);--shadow-lg:0 16px 40px rgba(0,0,0,.55);color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+.muted{color:var(--muted)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+svg.i{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* header */
+.topbar{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
+.topbar-in{max-width:1440px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand h1{font-size:15px;line-height:1.2;margin:0;font-weight:650;letter-spacing:-.01em}
+.brand p{margin:0;font-size:12px;color:var(--muted)}
+.fileinfo{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1 1 140px;padding-left:14px;border-left:1px solid var(--border)}
+.actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 12px;border:1px solid var(--border-2);background:var(--surface);border-radius:9px;font-weight:550;font-size:13px;box-shadow:var(--shadow);transition:background .15s,border-color .15s,transform .05s}
+.btn:hover{background:var(--surface-2)}
+.btn:active{transform:translateY(1px)}
+.btn:focus-visible,.chip:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,th:focus-visible,tr:focus-visible{outline:2px solid var(--primary);outline-offset:1px}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn.primary:hover{background:var(--primary-h)}
+.btn.danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,var(--border))}
+.btn.danger:hover{background:var(--bad-soft)}
+.btn.ghost{box-shadow:none;background:transparent}
+.btn.icon{width:34px;padding:0;justify-content:center}
+.btn.sm{height:28px;padding:0 9px;font-size:12px;border-radius:7px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.menu-wrap{position:relative}
+.menu{position:absolute;right:0;top:calc(100% + 6px);min-width:260px;background:var(--surface);border:1px solid var(--border);border-radius:11px;box-shadow:var(--shadow-lg);padding:5px;z-index:40;max-height:70vh;overflow:auto}
+.menu button,.menu label{display:flex;width:100%;align-items:center;justify-content:space-between;gap:12px;border:0;background:transparent;text-align:left;padding:8px 10px;border-radius:7px;font-size:13px}
+.menu button:hover,.menu label:hover{background:var(--surface-2)}
+.menu button[disabled]{opacity:.45;cursor:not-allowed}
+.menu .cnt{color:var(--muted);font-variant-numeric:tabular-nums;font-size:12px}
+.menu hr{border:0;border-top:1px solid var(--border);margin:4px 2px}
+.menu .mh{padding:6px 10px 2px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.menu label{justify-content:flex-start;cursor:pointer}
+
+.wrap{max-width:1440px;margin:0 auto;padding:18px 20px 60px}
+
+/* banner */
+.banner{display:flex;gap:12px;align-items:flex-start;padding:10px 14px;border-radius:10px;border:1px solid color-mix(in srgb,var(--ok) 35%,var(--border));background:var(--ok-soft);margin-bottom:14px;font-size:13px}
+.banner.warn{border-color:color-mix(in srgb,var(--warn) 40%,var(--border));background:var(--warn-soft)}
+.banner .sub{color:var(--muted);margin-top:2px}
+.banner button{margin-left:auto;border:0;background:transparent;color:var(--muted);font-size:18px;line-height:1;padding:0 4px}
+
+/* dropzone */
+.dropzone{border:1.5px dashed var(--border-2);border-radius:16px;background:var(--surface);padding:56px 20px;text-align:center;max-width:720px;margin:36px auto;cursor:pointer;transition:border-color .15s,background .15s}
+.dropzone:hover,.dropzone.over{border-color:var(--primary);background:var(--primary-soft)}
+.dropzone h2{margin:0 0 6px;font-size:17px;letter-spacing:-.01em}
+.dropzone p{margin:4px 0;color:var(--muted)}
+.dropzone .btn{margin-top:16px}
+.dropzone .priv{font-size:12px;margin-top:14px}
+
+/* summary */
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow);text-align:left;transition:border-color .15s,transform .15s;min-width:0}
+button.card:hover{border-color:var(--primary)}
+.card .lbl{font-size:12px;color:var(--muted);font-weight:550}
+.card .val{font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1.15;font-variant-numeric:tabular-nums;margin-top:2px}
+.card .sub{font-size:11.5px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card.dup .val{color:var(--dup)}
+.card.ok .val{color:var(--ok)}
+
+/* toolbar */
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.search{position:relative;flex:1 1 280px;min-width:0}
+.search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.search input{width:100%;height:36px;padding:0 12px 0 34px;border:1px solid var(--border-2);border-radius:9px;background:var(--surface);box-shadow:var(--shadow)}
+.attn.bad{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 45%,var(--border))}
+.attn.good{color:var(--ok)}
+.unsaved{display:inline-flex;align-items:center;gap:7px;height:28px;padding:0 10px;border-radius:99px;border:1px solid color-mix(in srgb,var(--warn) 45%,var(--border));background:var(--warn-soft);color:var(--warn);font-size:12px;font-weight:600}
+.unsaved i{width:7px;height:7px;border-radius:50%;background:var(--warn)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;overflow-x:auto;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{border:1px solid var(--border-2);background:var(--surface);border-radius:99px;padding:4px 11px;font-size:12.5px;font-weight:550;white-space:nowrap;display:inline-flex;gap:6px;align-items:center;transition:background .15s,border-color .15s}
+.chip:hover{background:var(--surface-2)}
+.chip .n{color:var(--muted);font-weight:500;font-variant-numeric:tabular-nums}
+.chip.on{background:var(--primary);border-color:var(--primary);color:#fff}
+.chip.on .n{color:rgba(255,255,255,.8)}
+.chip[disabled]{opacity:.45;cursor:not-allowed}
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:12px;box-shadow:var(--shadow);align-items:end}
+.filters label{display:flex;flex-direction:column;gap:4px;font-size:11.5px;font-weight:600;color:var(--muted);min-width:0}
+.filters select,.filters input[type=date],.sel{height:34px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface);padding:0 8px;font-size:13px;color:var(--text);min-width:0;width:100%}
+.sel{width:auto}
+.filters .chk{flex-direction:row;align-items:center;gap:7px;height:34px;color:var(--text);font-weight:550}
+#btnFilters{display:none}
+
+/* results bar */
+.resbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.resbar .count{font-weight:600}
+.resbar .count span{font-weight:400;color:var(--muted)}
+.resctl{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.seg{display:inline-flex;border:1px solid var(--border-2);border-radius:9px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:transparent;padding:0 12px;height:32px;font-size:13px;font-weight:550;color:var(--muted)}
+.seg button.on{background:var(--primary-soft);color:var(--primary)}
+.mobile-only{display:none}
+
+/* table */
+.tablewrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:auto;max-height:calc(100vh - 300px);min-height:220px}
+table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
+thead th{position:sticky;top:0;z-index:2;background:var(--surface-2);text-align:left;padding:9px 12px;font-size:11px;font-weight:650;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;user-select:none;cursor:pointer}
+thead th:hover{color:var(--text)}
+thead th .ar{margin-left:4px;opacity:.9;color:var(--primary)}
+thead th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}
+tbody td{padding:7px 12px;border-bottom:1px solid var(--border);white-space:nowrap;max-width:300px;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
+tbody tr{cursor:pointer;transition:background .12s}
+tbody tr:nth-child(even){background:var(--row-alt)}
+tbody tr:hover{background:var(--hover)}
+tbody tr.is-dup td:first-child{box-shadow:inset 3px 0 0 var(--dup)}
+tbody tr:last-child td{border-bottom:0}
+.idwrap{display:inline-flex;align-items:center;gap:6px}
+.idtxt{font-weight:600;font-variant-numeric:tabular-nums}
+.idtxt.dup{color:var(--dup)}
+.dupbadge{border:0;background:var(--dup-soft);color:var(--dup);border-radius:99px;font-size:11px;font-weight:700;padding:1px 7px;line-height:1.5}
+.dupbadge:hover{background:var(--dup);color:#fff}
+.tag{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;border-radius:99px;font-size:10px;font-weight:800}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}
+.tag.warn{background:var(--warn-soft);color:var(--warn)}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.dot.warn{background:var(--warn)}
+.pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:11.5px;font-weight:650;background:var(--surface-2);color:var(--muted);border:1px solid var(--border)}
+.pill.yes{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.pill.no{background:var(--bad-soft);color:var(--bad);border-color:transparent}
+.pill.odd,.pill.disp{background:var(--warn-soft);color:var(--warn);border-color:transparent;max-width:200px;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
+.money{color:var(--dup);font-weight:700;font-variant-numeric:tabular-nums}
+.dupbadge .m{font-weight:600;opacity:.9}
+td.num.gt{color:var(--dup);font-weight:700}
+.gsum{display:flex;gap:18px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--border);font-size:13px}
+.gsum b{font-variant-numeric:tabular-nums}
+.empty{padding:48px 16px;text-align:center;color:var(--muted)}
+.empty strong{display:block;color:var(--text);font-size:15px;margin-bottom:4px}
+.pager{display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap;margin-top:10px;font-size:12.5px;color:var(--muted)}
+.pager .pg{display:flex;gap:6px;align-items:center}
+a.lnk{color:var(--primary);text-decoration:none;font-weight:550}
+a.lnk:hover{text-decoration:underline}
+
+/* overlays */
+.ov{position:fixed;inset:0;background:rgba(10,14,22,.45);z-index:60;display:flex;align-items:center;justify-content:center;padding:16px;animation:fade .15s}
+.ov.top{z-index:90}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow-lg);width:100%;max-width:520px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden}
+.modal.wide{max-width:1040px;height:min(86vh,820px)}
+.modal-h{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.modal-h h2{margin:0;font-size:16px;letter-spacing:-.01em}
+.modal-b{padding:14px 16px;overflow:auto;flex:1}
+.modal-f{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.x{border:0;background:transparent;font-size:22px;line-height:1;color:var(--muted);padding:2px 8px;border-radius:7px}
+.x:hover{background:var(--surface-2);color:var(--text)}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:650}
+.badge.dup{background:var(--dup-soft);color:var(--dup)}
+.badge.ok{background:var(--ok-soft);color:var(--ok)}
+.badge.warn{background:var(--warn-soft);color:var(--warn)}
+.badge.n{background:var(--primary);color:#fff;min-width:18px;justify-content:center;padding:0 6px;height:18px;font-size:11px}
+.gid{font-size:18px;font-weight:700;color:var(--dup);font-variant-numeric:tabular-nums}
+.gacts{display:flex;gap:6px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface-2);align-items:center}
+.gacts .sp{flex:1}
+.legend{font-size:12px;color:var(--muted);margin:0 0 10px}
+.legend mark{background:var(--warn-soft);color:var(--warn);padding:0 5px;border-radius:4px}
+.gcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
+.gcard{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface)}
+.gcard>header{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface-2);border-bottom:1px solid var(--border);font-size:12.5px}
+.gcard>header .sp{flex:1}
+.gcard dl{margin:0;padding:6px 12px 10px}
+.gcard .f{display:grid;grid-template-columns:104px 1fr;gap:8px;padding:4px 6px;border-radius:6px;font-size:13px}
+.gcard .f dt{color:var(--muted);font-size:12px}
+.gcard .f dd{margin:0;word-break:break-word;min-width:0}
+.diff{background:var(--warn-soft)}
+table.cmp{width:max-content;min-width:100%}
+table.cmp th,table.cmp td{position:static;white-space:normal;max-width:260px;vertical-align:top;padding:7px 12px;border-bottom:1px solid var(--border);text-align:left;text-transform:none;letter-spacing:0;font-size:13px;word-break:break-word}
+table.cmp th.rl{color:var(--muted);font-size:12px;font-weight:600;background:var(--surface-2);position:sticky;left:0;min-width:120px;z-index:1}
+table.cmp thead th{position:sticky;top:0;z-index:2}
+table.cmp td.diff{background:var(--warn-soft)}
+.chkl{display:inline-flex;gap:6px;align-items:center;font-size:12.5px;cursor:pointer}
+.chkl input{width:15px;height:15px;accent-color:var(--ok)}
+
+/* drawer */
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,100vw);background:var(--surface);border-left:1px solid var(--border);box-shadow:var(--shadow-lg);z-index:70;display:flex;flex-direction:column;animation:slide .18s ease-out}
+.dov{position:fixed;inset:0;background:rgba(10,14,22,.35);z-index:65;animation:fade .15s}
+.drawer-b{flex:1;overflow:auto;padding:14px 16px}
+.drawer-h{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
+.drawer-h .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.drawer-h h2{margin:0;font-size:16px;font-variant-numeric:tabular-nums}
+.drawer-h h2.dup{color:var(--dup)}
+.fld{margin-bottom:11px}
+.fld label{display:block;font-size:11.5px;font-weight:650;color:var(--muted);margin-bottom:3px}
+.fld input,.fld textarea{width:100%;border:1px solid var(--border-2);border-radius:8px;background:var(--surface);padding:7px 10px;resize:vertical;font-size:13px}
+.fld.changed input,.fld.changed textarea{border-color:var(--warn);background:var(--warn-soft)}
+.fld .orig{font-size:11.5px;color:var(--warn);margin-top:2px;word-break:break-word}
+.issues{background:var(--warn-soft);border:1px solid color-mix(in srgb,var(--warn) 35%,var(--border));border-radius:9px;padding:8px 12px;margin-bottom:12px;font-size:12.5px;color:var(--warn)}
+.issues ul{margin:4px 0 0;padding-left:18px}
+.drawer-f{padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;background:var(--surface)}
+.drawer-f .sp{flex:1}
+.vlist{display:flex;flex-direction:column;gap:6px}
+.vitem{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:10px}
+.vitem .t{flex:1}
+.vitem .c{font-weight:700;font-variant-numeric:tabular-nums}
+
+/* toast & loader */
+.toasts{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:110;display:flex;flex-direction:column;gap:8px;align-items:center;width:max-content;max-width:calc(100vw - 24px);pointer-events:none}
+.toast{pointer-events:auto;display:flex;align-items:center;gap:12px;background:#111827;color:#fff;padding:9px 14px;border-radius:10px;box-shadow:var(--shadow-lg);font-size:13px;animation:rise .2s ease-out;border-left:4px solid var(--primary)}
+.toast.success{border-left-color:var(--ok)}
+.toast.error{border-left-color:var(--bad)}
+.toast button{border:0;background:transparent;color:#93C5FD;font-weight:650;padding:0}
+.loader{position:fixed;inset:0;background:rgba(10,14,22,.4);z-index:100;display:flex;align-items:center;justify-content:center}
+.loader div{background:var(--surface);border-radius:14px;padding:18px 24px;display:flex;gap:12px;align-items:center;box-shadow:var(--shadow-lg);font-weight:550}
+.spin{width:20px;height:20px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--primary);animation:rot .8s linear infinite}
+.dropov{position:fixed;inset:10px;border:2px dashed var(--primary);border-radius:18px;background:color-mix(in srgb,var(--primary) 10%,transparent);z-index:120;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:650;color:var(--primary);pointer-events:none}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes slide{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
+@keyframes rise{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+@keyframes rot{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* responsive */
+@media (max-width:980px){
+  .cards{grid-template-columns:repeat(2,1fr)}
+  #btnFilters{display:inline-flex}
+  .filters{display:none}
+  .filters.open{display:grid}
+}
+@media (max-width:760px){
+  .topbar-in{padding:8px 12px;gap:8px}
+  .brand p{display:none}
+  .fileinfo{order:5;flex-basis:100%;border-left:0;padding-left:0}
+  .wrap{padding:12px 12px 70px}
+  .btn .lbl{display:none}
+  .btn.primary .lbl,.btn.exp .lbl{display:inline}
+  .mobile-only{display:inline-block}
+  .tablewrap{max-height:none;border:0;background:transparent;box-shadow:none;overflow:visible;min-height:0}
+  table,tbody{display:block}
+  thead{display:none}
+  tbody tr,tbody tr:nth-child(even){display:block;background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;padding:6px 12px;box-shadow:var(--shadow)}
+  tbody tr.is-dup{border-left:3px solid var(--dup)}
+  tbody tr.is-dup td:first-child{box-shadow:none}
+  tbody td{display:flex;justify-content:space-between;align-items:center;gap:14px;border:0;padding:5px 0;max-width:none;white-space:normal;text-align:right;overflow:visible}
+  tbody td::before{content:attr(data-label);color:var(--muted);font-size:11.5px;flex:0 0 34%;text-align:left}
+  tbody td:first-child{border-bottom:1px solid var(--border);padding-bottom:7px;margin-bottom:3px}
+  .drawer{width:100vw;top:6vh;border-radius:16px 16px 0 0;border-left:0}
+  .modal.wide{height:94vh;max-height:94vh}
+  .ov{padding:8px;align-items:flex-end}
+  .modal{max-width:none}
+  .gcards{grid-template-columns:1fr}
+  .resctl{margin-left:0;width:100%}
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect x="3.5" y="3" width="15" height="19" rx="2.5" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.8"/><rect x="9.5" y="8" width="15" height="19" rx="2.5" fill="#fff" stroke="#2563EB" stroke-width="1.8"/><path d="M13 13h8M13 17h5" stroke="#2563EB" stroke-width="1.8" stroke-linecap="round"/><circle cx="23" cy="23" r="4.6" fill="#2563EB" stroke="#fff" stroke-width="1.6"/><path d="M26.4 26.4l3 3" stroke="#2563EB" stroke-width="2.4" stroke-linecap="round"/></svg>
+      <div><h1>Pay Per Item Manager</h1><p>CSV Review &amp; Duplicate Detection</p></div>
+    </div>
+    <div class="fileinfo" id="fileInfo" hidden></div>
+    <div class="actions">
+      <button class="btn primary" id="btnImport" type="button"><svg class="i" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg><span class="lbl">Import CSV</span></button>
+      <div class="menu-wrap">
+        <button class="btn exp" id="btnExport" type="button" aria-haspopup="menu" aria-expanded="false"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M4 20h16"/></svg><span class="lbl">Export CSV</span></button>
+        <div class="menu" id="exportMenu" role="menu" hidden></div>
+      </div>
+      <button class="btn icon" id="btnTheme" type="button" aria-label="Toggle dark mode" title="Toggle dark mode"></button>
+    </div>
+  </div>
+</header>
+<input type="file" id="fileInput" accept=".csv,.tsv,.txt,text/csv,text/plain" hidden>
+
+<main class="wrap">
+  <div id="banner"></div>
+
+  <section id="empty" class="dropzone" tabindex="0" role="button" aria-label="Import a CSV file">
+    <h2>Drop your Pay Per Item CSV here</h2>
+    <p>or click to choose a file. Columns are detected automatically.</p>
+    <button class="btn primary" type="button" id="btnImport2">Choose CSV file</button>
+    <p class="priv">Everything stays in your browser. Nothing is uploaded.</p>
+  </section>
+
+  <div id="app" hidden>
+    <section class="cards" aria-label="Summary">
+      <div class="card"><div class="lbl">Total Records</div><div class="val" id="mTotal">0</div><div class="sub" id="mTotalSub"></div></div>
+      <button type="button" class="card dup" data-act="card-groups"><div class="lbl">Duplicate Groups</div><div class="val" id="mGroups">0</div><div class="sub" id="mGroupsSub">Interaction IDs paid more than once</div></button>
+      <button type="button" class="card dup" data-act="card-dups"><div class="lbl">Duplicate Records</div><div class="val" id="mDups">0</div><div class="sub" id="mDupsSub"></div></button>
+      <button type="button" class="card ok" data-act="card-unique"><div class="lbl">Unique Records</div><div class="val" id="mUnique">0</div><div class="sub" id="mUniqueSub">ID appears exactly once</div></button>
+    </section>
+
+    <div class="toolbar">
+      <div class="search">
+        <svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Search ID, conversation, agent, subject…  (Ctrl+F)" aria-label="Search records">
+      </div>
+      <button class="btn" id="btnFilters" type="button" aria-expanded="false"><svg class="i" viewBox="0 0 24 24"><path d="M4 5h16l-6 8v6l-4-2v-4z"/></svg><span>Filters</span><span class="badge n" id="filtBadge" hidden></span></button>
+      <button class="btn" id="btnValidate" type="button"></button>
+      <button class="unsaved" id="btnUnsaved" type="button" hidden><i></i><span></span></button>
+    </div>
+    <div class="chips" id="chips" role="group" aria-label="Quick views"></div>
+
+    <section class="filters" id="filters" aria-label="Filters">
+      <label>Duplicates<select id="fDup"><option value="all">All</option><option value="dup">Duplicates</option><option value="unique">Unique</option></select></label>
+      <label>Paid<select id="fPaid"><option value="all">All</option><option value="yes">Yes</option><option value="no">No</option></select></label>
+      <label>Agent<select id="fAgent"></select></label>
+      <label>Channel<select id="fChannel"></select></label>
+      <label>Dispute<select id="fDispute"><option value="all">All</option><option value="yes">Disputed</option><option value="no">Not disputed</option></select></label>
+      <label>Review<select id="fReviewed"><option value="all">All</option><option value="yes">Reviewed</option><option value="no">Not reviewed</option></select></label>
+      <label>Resolved from<input type="date" id="fFrom"></label>
+      <label>Resolved to<input type="date" id="fTo"></label>
+      <label class="chk"><input type="checkbox" id="fMod"> Edited only</label>
+      <button class="btn" id="btnClear" type="button">Clear filters</button>
+    </section>
+
+    <div class="resbar">
+      <div class="count" id="resCount"></div>
+      <div class="resctl">
+        <select class="sel mobile-only" id="sortSel" aria-label="Sort records"></select>
+        <select class="sel" id="gSortSel" aria-label="Order groups" hidden><option value="seen">Groups: table order</option><option value="amt">Groups: highest total</option><option value="count">Groups: most payments</option></select>
+        <div class="seg" id="viewSeg" role="group" aria-label="View"><button type="button" data-view="records" class="on">Records</button><button type="button" data-view="groups">Groups</button></div>
+        <div class="menu-wrap">
+          <button class="btn" id="btnCols" type="button" aria-haspopup="menu" aria-expanded="false">Columns</button>
+          <div class="menu" id="colsMenu" hidden></div>
+        </div>
+        <select class="sel" id="pageSize" aria-label="Rows per page"><option>50</option><option>100</option><option>250</option><option>500</option></select>
+      </div>
+    </div>
+
+    <div class="tablewrap" id="tableWrap"><table id="tbl"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+    <nav class="pager" id="pager" aria-label="Pagination"></nav>
+  </div>
+</main>
+
+<div class="dov" id="dov" hidden></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="Record details" hidden></aside>
+<div class="ov" id="groupOv" hidden><div class="modal wide" id="groupModal" role="dialog" aria-modal="true" aria-label="Duplicate group"></div></div>
+<div class="ov" id="valOv" hidden><div class="modal" id="valModal" role="dialog" aria-modal="true" aria-label="Data validation"></div></div>
+<div class="ov top" id="dlgOv" hidden><div class="modal" id="dlgModal" role="alertdialog" aria-modal="true"></div></div>
+<div class="loader" id="loader" hidden><div><span class="spin"></span><span id="loaderTxt">Processing…</span></div></div>
+<div class="dropov" id="dropOv" hidden>Drop CSV to import</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" onerror="window.__noPapa=true"></script>
+<script>
+(() => {
+'use strict';
+
+/*CORE-START*/
+const ROLE_ORDER = ['resolved','iid','conv','front','channel','agent','paid','type','level','amount','reason','replied','subject','dispute'];
+const ROLE_LABEL = {resolved:'Resolved (PHT)',iid:'Interaction ID',conv:'Conversation',front:'Front link',channel:'Channel',agent:'Agent',paid:'Paid',type:'Type of work',level:'Level',amount:'Amount USD',reason:'Reason',replied:'Replied',subject:'Subject',dispute:'Dispute'};
+const ROLE_ALIASES = {
+  resolved:['resolvedpht','resolved','resolveddate','resolvedat','resolvedon'],
+  iid:['interactionid','interaction','interactionnumber','interactionno'],
+  conv:['conversation','conversationid'],
+  front:['frontlink','frontlinks','frontconversation','frontlinkurl'],
+  channel:['channel','inbox'],
+  agent:['agent','agentname'],
+  paid:['paid','ispaid'],
+  type:['typeofwork','worktype'],
+  level:['level','paylevel'],
+  amount:['amountusd','amount','usd','amountdollars'],
+  reason:['reason'],
+  replied:['replied','repliedby'],
+  subject:['subject'],
+  dispute:['dispute','disputed']
+};
+const normHeader = s => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, '');
+
+function detectRoles(headers){
+  const nh = headers.map(normHeader), used = new Set(), roles = {};
+  for (const role of ROLE_ORDER){
+    roles[role] = -1;
+    for (const alias of ROLE_ALIASES[role]){
+      const i = nh.findIndex((h, k) => h === alias && !used.has(k));
+      if (i >= 0){ roles[role] = i; used.add(i); break; }
+    }
+  }
+  return roles;
+}
+
+function sniffDelimiter(text){
+  const nl = text.search(/\r|\n/);
+  const first = nl < 0 ? text : text.slice(0, nl);
+  const c = {',':0,';':0,'\t':0}; let q = false;
+  for (const ch of first){ if (ch === '"') q = !q; else if (!q && ch in c) c[ch]++; }
+  let best = ',', n = c[','];
+  for (const d of [';','\t']) if (c[d] > n){ best = d; n = c[d]; }
+  return best;
+}
+
+function parseCSVText(text, delim){
+  delim = delim || ',';
+  const rows = []; let row = [], f = '', q = false, i = 0; const n = text.length;
+  while (i < n){
+    const c = text[i];
+    if (q){
+      if (c === '"'){ if (text[i+1] === '"'){ f += '"'; i += 2; continue; } q = false; i++; continue; }
+      f += c; i++; continue;
+    }
+    if (c === '"' && f === ''){ q = true; i++; continue; }
+    if (c === delim){ row.push(f); f = ''; i++; continue; }
+    if (c === '\r' || c === '\n'){ if (c === '\r' && text[i+1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; i++; continue; }
+    f += c; i++;
+  }
+  if (f !== '' || row.length){ row.push(f); rows.push(row); }
+  return rows.filter(r => !r.every(x => String(x).trim() === ''));
+}
+
+function csvField(v){ return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }
+function serializeCSV(headers, rows){
+  const out = [headers.map(csvField).join(',')];
+  for (const r of rows) out.push(headers.map((_, i) => csvField(r[i])).join(','));
+  return out.join('\r\n') + '\r\n';
+}
+
+function cyrb53(str, seed = 0){
+  let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+  for (let i = 0, ch; i < str.length; i++){
+    ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+}
+
+function parseYmd(s){
+  s = String(s || '').trim(); let y, m, d, x;
+  if ((x = /^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})(?!\d)/.exec(s))){ y = +x[1]; m = +x[2]; d = +x[3]; }
+  else if ((x = /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?!\d)/.exec(s))){ m = +x[1]; d = +x[2]; y = +x[3]; }
+  else return '';
+  const dt = new Date(y, m - 1, d);
+  if (dt.getFullYear() !== y || dt.getMonth() !== m - 1 || dt.getDate() !== d) return '';
+  return y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+}
+function parseAmt(s){
+  const t = String(s == null ? '' : s).trim().replace(/[$,\s]/g, '');
+  return /^-?\d+(\.\d+)?$/.test(t) ? parseFloat(t) : NaN;
+}
+function safeUrl(s){
+  try { const u = new URL(String(s || '').trim()); return (u.protocol === 'http:' || u.protocol === 'https:') ? u.href : null; }
+  catch (e) { return null; }
+}
+function paidState(s){
+  const t = normHeader(s);
+  if (['yes','y','true','1','paid'].includes(t)) return 'yes';
+  if (['no','n','false','0','unpaid','notpaid'].includes(t)) return 'no';
+  return t === '' ? '' : 'other';
+}
+function countKeys(keys){
+  const m = new Map();
+  for (const k of keys) if (k) m.set(k, (m.get(k) || 0) + 1);
+  return m;
+}
+/*CORE-END*/
+
+/* ---------- state ---------- */
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LS = {
+  get(k, d){ try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
+  set(k, v){ try { localStorage.setItem(k, v); } catch (e) {} }
+};
+const money = new Intl.NumberFormat('en-US', {style:'currency', currency:'USD'});
+const num = new Intl.NumberFormat('en-US');
+
+const S = {
+  fileName:'', fileSize:0, headers:[], roles:{}, colRole:[], rows:[], origList:[], deleted:[], byUid:new Map(), nextUid:1,
+  groups:new Map(), stats:{}, filtered:[], dirty:false,
+  filters:{q:'', dup:'all', paid:'all', agent:'', channel:'', dispute:'all', reviewed:'all', from:'', to:'', issue:'', mod:false},
+  sort:{col:-1, dir:1}, gSort:'seen', groupAmt:new Map(), view:'records', page:1, pageSize:parseInt(LS.get('ppi.pageSize','100'),10) || 100,
+  visibleCols:[], reviewed:new Set(), gKey:null, gLayout:'stack', dUid:null, dDirty:false
+};
+try { JSON.parse(LS.get('ppi.reviewed','[]')).forEach(x => S.reviewed.add(x)); } catch (e) {}
+const saveReviewed = () => LS.set('ppi.reviewed', JSON.stringify(Array.from(S.reviewed)));
+
+const ICON = {
+  sun:'<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+  moon:'<svg class="i" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/></svg>',
+  warn:'<svg class="i" viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.01"/></svg>',
+  check:'<svg class="i" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  ext:'<svg class="i" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5"/></svg>',
+  copy:'<svg class="i" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 011-1h10"/></svg>',
+  dl:'<svg class="i" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M4 20h16"/></svg>'
+};
+
+/* ---------- theme ---------- */
+function applyTheme(t){
+  document.documentElement.dataset.theme = t;
+  $('meta[name="theme-color"]').content = t === 'dark' ? '#0E1117' : '#2563EB';
+  $('#btnTheme').innerHTML = t === 'dark' ? ICON.sun : ICON.moon;
+}
+applyTheme(LS.get('ppi.theme', (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light'));
+$('#btnTheme').addEventListener('click', () => {
+  const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  LS.set('ppi.theme', t); applyTheme(t);
+});
+
+/* ---------- feedback ---------- */
+function toast(msg, o = {}){
+  const el = document.createElement('div');
+  el.className = 'toast ' + (o.type || 'info');
+  el.setAttribute('role', o.type === 'error' ? 'alert' : 'status');
+  el.innerHTML = '<span>' + esc(msg) + '</span>';
+  if (o.action){
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = o.action.label;
+    b.addEventListener('click', () => { o.action.fn(); el.remove(); });
+    el.appendChild(b);
+  }
+  $('#toasts').appendChild(el);
+  setTimeout(() => el.remove(), o.ms || (o.action ? 8000 : 3600));
+}
+const showLoader = t => { $('#loaderTxt').textContent = t || 'Processing…'; $('#loader').hidden = false; };
+const hideLoader = () => { $('#loader').hidden = true; };
+const tick = () => new Promise(r => setTimeout(r, 30));
+
+let dlgResolve = null;
+function dlg({title, message, actions}){
+  return new Promise(res => {
+    dlgResolve = res;
+    const m = $('#dlgModal');
+    m.innerHTML = '<div class="modal-h"><h2>' + esc(title) + '</h2></div><div class="modal-b">' + message + '</div><div class="modal-f"></div>';
+    const f = $('.modal-f', m);
+    actions.forEach(a => {
+      const b = document.createElement('button'); b.type = 'button';
+      b.className = 'btn' + (a.kind ? ' ' + a.kind : ''); b.textContent = a.label;
+      b.addEventListener('click', () => closeDlg(a.value));
+      f.appendChild(b);
+    });
+    $('#dlgOv').hidden = false;
+    const last = f.lastElementChild; if (last) last.focus();
+  });
+}
+function closeDlg(v){
+  $('#dlgOv').hidden = true;
+  const r = dlgResolve; dlgResolve = null; if (r) r(v);
+}
+const confirmDlg = (title, message, ok, danger) => dlg({title, message:'<p style="margin:0">' + message + '</p>', actions:[{label:'Cancel', value:false}, {label:ok, value:true, kind:danger ? 'danger' : 'primary'}]});
+
+/* ---------- row model ---------- */
+function derive(r){
+  const R = S.roles;
+  r.key = R.iid >= 0 ? String(r.v[R.iid] || '').trim().toLowerCase() : '';
+  const parts = [];
+  for (const role of ['iid','conv','agent','channel','subject','reason','replied','dispute']) if (R[role] >= 0) parts.push(r.v[R[role]]);
+  r.blob = (parts.length ? parts : r.v).join('\u0001').toLowerCase();
+  r.ymd = R.resolved >= 0 ? parseYmd(r.v[R.resolved]) : '';
+  r.amt = R.amount >= 0 ? parseAmt(r.v[R.amount]) : NaN;
+  r.pay = R.paid >= 0 ? paidState(r.v[R.paid]) : '';
+  r.mod = r.v.some((x, i) => x !== r.orig[i]);
+}
+function makeRow(uid, vals, fp, oi){
+  const r = {uid, v:vals.slice(), orig:vals.slice(), fp, oi, key:'', blob:'', ymd:'', amt:NaN, pay:'', mod:false, dupN:0, issues:[]};
+  derive(r); return r;
+}
+const val = (r, role) => S.roles[role] >= 0 ? (r.v[S.roles[role]] || '') : '';
+
+const ISSUE_LABEL = {noid:'Empty Interaction ID', multi:'Multiple IDs in one Interaction ID field', missing:'Missing required values', amount:'Invalid Amount USD', date:'Invalid date', paid:'Unusual Paid value', front:'Missing or invalid Front link', mismatch:'Paid status does not match amount'};
+function validateRow(r){
+  const R = S.roles, out = [];
+  if (R.iid >= 0){
+    const id = String(r.v[R.iid] || '').trim();
+    if (!id) out.push({code:'noid', msg:'Interaction ID is empty'});
+    else if (/[,;\s]/.test(id)) out.push({code:'multi', msg:'Interaction ID contains more than one ID'});
+  }
+  const miss = [];
+  for (const role of ['resolved','agent','paid','type','amount']) if (R[role] >= 0 && String(r.v[R[role]] || '').trim() === '') miss.push(ROLE_LABEL[role]);
+  if (miss.length) out.push({code:'missing', msg:'Missing: ' + miss.join(', ')});
+  if (R.amount >= 0 && String(r.v[R.amount] || '').trim() !== '' && isNaN(r.amt)) out.push({code:'amount', msg:'Amount USD is not a valid number'});
+  if (R.resolved >= 0 && String(r.v[R.resolved] || '').trim() !== '' && !r.ymd) out.push({code:'date', msg:'Resolved date is not a valid date'});
+  if (R.paid >= 0 && r.pay === 'other') out.push({code:'paid', msg:'Unusual Paid value "' + r.v[R.paid] + '"'});
+  if (R.front >= 0){
+    const f = String(r.v[R.front] || '').trim();
+    if (!f) out.push({code:'front', msg:'Front link is missing'});
+    else if (!safeUrl(f)) out.push({code:'front', msg:'Front link is not a valid web URL'});
+  }
+  if (R.paid >= 0 && R.amount >= 0 && !isNaN(r.amt)){
+    if (r.pay === 'no' && r.amt > 0) out.push({code:'mismatch', msg:'Marked unpaid but amount is greater than 0'});
+    if (r.pay === 'yes' && r.amt === 0) out.push({code:'mismatch', msg:'Marked paid but amount is 0'});
+  }
+  return out;
+}
+
+function recompute(){
+  const counts = countKeys(S.rows.map(r => r.key));
+  const groups = new Map();
+  let amount = 0, dupAmt = 0, uniqAmt = 0, hasAmt = false, noId = 0, uniq = 0, dupRecs = 0, yes = 0, no = 0, disp = 0, attn = 0, mods = 0;
+  const issueCounts = {};
+  for (const r of S.rows){
+    r.dupN = r.key ? counts.get(r.key) : 0;
+    if (r.dupN > 1){ if (!groups.has(r.key)) groups.set(r.key, []); groups.get(r.key).push(r); dupRecs++; }
+    else if (r.dupN === 1) uniq++; else noId++;
+    r.issues = validateRow(r);
+    if (r.issues.length){ attn++; new Set(r.issues.map(i => i.code)).forEach(c => issueCounts[c] = (issueCounts[c] || 0) + 1); }
+    if (!isNaN(r.amt)){ amount += r.amt; hasAmt = true; if (r.dupN > 1) dupAmt += r.amt; else if (r.dupN === 1) uniqAmt += r.amt; }
+    if (r.pay === 'yes') yes++; else if (r.pay === 'no') no++;
+    if (val(r, 'dispute').trim()) disp++;
+    if (r.mod) mods++;
+  }
+  S.groups = groups;
+  S.groupAmt = new Map(); groups.forEach((recs, k) => S.groupAmt.set(k, recs.reduce((t, r) => t + (isNaN(r.amt) ? 0 : r.amt), 0)));
+  S.stats = {dupAmt, uniqAmt, total:S.rows.length, groups:groups.size, dupRecs, extra:dupRecs - groups.size, uniq, noId, amount, hasAmt, yes, no, disp, attn, issueCounts, mods};
+}
+
+/* ---------- import ---------- */
+async function importFile(file){
+  if (!file) return;
+  if (S.rows.length || S.headers.length){
+    const ok = await confirmDlg('Replace current dataset?', 'Importing <strong>' + esc(file.name) + '</strong> will replace the records currently loaded' + (S.dirty ? ' and discard your unsaved edits' : '') + '. Datasets are never merged.', 'Replace', true);
+    if (!ok) return;
+  }
+  showLoader('Reading ' + file.name + '…');
+  try {
+    await tick();
+    let text = file.text ? await file.text() : await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsText(file, 'utf-8'); });
+    text = text.replace(/^\uFEFF/, '');
+    showLoader('Parsing records…'); await tick();
+    const delim = sniffDelimiter(text);
+    let data;
+    if (window.Papa && !window.__noPapa){
+      const res = Papa.parse(text, {delimiter:delim, skipEmptyLines:'greedy'});
+      data = res.data;
+    } else data = parseCSVText(text, delim);
+    data = data.filter(r => !r.every(x => String(x).trim() === ''));
+    if (!data.length) throw new Error('The file is empty or is not a valid CSV.');
+    let headers = data[0].map(h => String(h).replace(/^\uFEFF/, '').trim());
+    const body = data.slice(1);
+    let width = headers.length; for (const r of body) if (r.length > width) width = r.length;
+    const extra = width - headers.length;
+    headers = headers.map((h, i) => h || 'Column ' + (i + 1));
+    for (let i = headers.length; i < width; i++) headers.push('Column ' + (i + 1));
+    S.headers = headers; S.roles = detectRoles(headers);
+    S.colRole = headers.map((_, i) => ROLE_ORDER.find(k => S.roles[k] === i) || '');
+    const seen = new Map(); S.rows = []; S.origList = []; S.deleted = []; S.byUid = new Map(); S.nextUid = 1;
+    body.forEach((raw, oi) => {
+      const vals = headers.map((_, i) => raw[i] == null ? '' : String(raw[i]));
+      const h = cyrb53(vals.join('\u241F')).toString(36);
+      const n = (seen.get(h) || 0) + 1; seen.set(h, n);
+      const r = makeRow(S.nextUid++, vals, h + '.' + n, oi);
+      S.rows.push(r); S.origList.push(r); S.byUid.set(r.uid, r);
+    });
+    S.fileName = file.name; S.fileSize = file.size; S.dirty = false;
+    S.filters = {q:'', dup:'all', paid:'all', agent:'', channel:'', dispute:'all', reviewed:'all', from:'', to:'', issue:'', mod:false};
+    S.sort = {col:-1, dir:1}; S.view = 'records'; S.page = 1;
+    $('#q').value = '';
+    const def = ['resolved','iid','agent','paid','type','level','amount','reason','dispute'].map(k => S.roles[k]).filter(i => i >= 0);
+    S.visibleCols = def.length >= 3 ? def.sort((a, b) => a - b) : headers.map((_, i) => i).slice(0, 9);
+    closeDrawer(true); closeGroup(); $('#valOv').hidden = true;
+    refresh();
+    const st = S.stats;
+    const missing = ROLE_ORDER.filter(k => S.roles[k] < 0);
+    const notes = [];
+    if (S.roles.iid < 0) notes.push('Interaction ID column not found, so duplicate detection is disabled.');
+    else if (missing.length) notes.push('Not found: ' + missing.map(k => ROLE_LABEL[k]).join(', ') + '. Features that depend on them are disabled.');
+    if (extra > 0) notes.push(extra + ' extra column' + (extra > 1 ? 's' : '') + ' without a header were kept.');
+    if (window.__noPapa || !window.Papa) notes.push('PapaParse could not be loaded, so the built-in parser was used.');
+    showBanner('<strong>Imported ' + num.format(st.total) + ' records</strong> from ' + esc(file.name) + ' · ' + headers.length + ' columns · ' + num.format(st.groups) + ' duplicate groups (' + num.format(st.dupRecs) + ' records)' + (st.attn ? ' · ' + num.format(st.attn) + ' need attention' : ''), notes, notes.length ? 'warn' : '');
+    toast('Imported ' + num.format(st.total) + ' records', {type:'success'});
+  } catch (e) {
+    toast('Import failed: ' + (e && e.message ? e.message : e), {type:'error', ms:6000});
+  } finally { hideLoader(); }
+}
+function showBanner(html, notes, kind){
+  $('#banner').innerHTML = '<div class="banner ' + (kind || '') + '"><div><div>' + html + '</div>' + notes.map(n => '<div class="sub">' + esc(n) + '</div>').join('') + '</div><button type="button" data-act="dismiss" aria-label="Dismiss">×</button></div>';
+}
+
+/* ---------- filtering ---------- */
+function matches(r, f, qTerms, ){
+  for (const t of qTerms) if (!r.blob.includes(t)) return false;
+  if (f.dup === 'dup' && r.dupN < 2) return false;
+  if (f.dup === 'unique' && r.dupN !== 1) return false;
+  if (f.paid !== 'all' && r.pay !== f.paid) return false;
+  if (f.agent && val(r, 'agent') !== f.agent) return false;
+  if (f.channel && val(r, 'channel') !== f.channel) return false;
+  if (f.dispute !== 'all'){ const d = val(r, 'dispute').trim() !== ''; if ((f.dispute === 'yes') !== d) return false; }
+  if (f.reviewed !== 'all' && (f.reviewed === 'yes') !== S.reviewed.has(r.fp)) return false;
+  if (f.from && (!r.ymd || r.ymd < f.from)) return false;
+  if (f.to && (!r.ymd || r.ymd > f.to)) return false;
+  if (f.issue === 'any' && !r.issues.length) return false;
+  if (f.issue && f.issue !== 'any' && !r.issues.some(i => i.code === f.issue)) return false;
+  if (f.mod && !r.mod) return false;
+  return true;
+}
+function cmp(a, b){
+  const c = S.sort.col, role = S.colRole[c];
+  let res;
+  if (role === 'amount'){
+    const x = a.amt, y = b.amt;
+    if (isNaN(x) && isNaN(y)) res = 0; else if (isNaN(x)) return 1; else if (isNaN(y)) return -1; else res = x - y;
+  } else res = String(a.v[c]).localeCompare(String(b.v[c]), undefined, {numeric:true, sensitivity:'base'});
+  return res * S.sort.dir;
+}
+function applyFilters(){
+  const f = S.filters, qTerms = f.q.toLowerCase().split(/\s+/).filter(Boolean);
+  let list = S.rows.filter(r => matches(r, f, qTerms));
+  if (S.sort.col >= 0) list = list.slice().sort(cmp);
+  S.filtered = list;
+}
+function groupKeys(){
+  const seen = new Set(), out = [];
+  for (const r of S.filtered) if (r.dupN > 1 && !seen.has(r.key)){ seen.add(r.key); out.push(r.key); }
+  if (S.gSort === 'amt') out.sort((a, b) => (S.groupAmt.get(b) || 0) - (S.groupAmt.get(a) || 0));
+  else if (S.gSort === 'count') out.sort((a, b) => S.groups.get(b).length - S.groups.get(a).length);
+  return out;
+}
+function activeFilterCount(){
+  const f = S.filters;
+  return (f.q ? 1 : 0) + (f.dup !== 'all') + (f.paid !== 'all') + (f.agent ? 1 : 0) + (f.channel ? 1 : 0) + (f.dispute !== 'all') + (f.reviewed !== 'all') + (f.from ? 1 : 0) + (f.to ? 1 : 0) + (f.issue ? 1 : 0) + (f.mod ? 1 : 0);
+}
+
+/* ---------- rendering ---------- */
+function refresh(){
+  recompute();
+  populateSelects();
+  renderSummary();
+  renderChrome();
+  applyFilters();
+  renderResults();
+}
+function populateSelects(){
+  const fill = (sel, role, label) => {
+    const R = S.roles[role], el = $(sel), cur = S.filters[role];
+    if (R < 0){ el.innerHTML = '<option value="">Not available</option>'; el.disabled = true; return; }
+    const m = new Map(); for (const r of S.rows){ const v = r.v[R].trim(); if (v) m.set(v, (m.get(v) || 0) + 1); }
+    const keys = Array.from(m.keys()).sort((a, b) => a.localeCompare(b, undefined, {sensitivity:'base'}));
+    el.disabled = false;
+    el.innerHTML = '<option value="">All ' + label + '</option>' + keys.map(k => '<option value="' + esc(k) + '">' + esc(k) + ' (' + m.get(k) + ')</option>').join('');
+    if (cur && m.has(cur)) el.value = cur; else { el.value = ''; S.filters[role] = ''; }
+  };
+  fill('#fAgent', 'agent', 'agents'); fill('#fChannel', 'channel', 'channels');
+  const R = S.roles, dis = (id, ok) => { const e = $(id); e.disabled = !ok; e.title = ok ? '' : 'Column not found in this CSV'; };
+  dis('#fDup', R.iid >= 0); dis('#fPaid', R.paid >= 0); dis('#fDispute', R.dispute >= 0); dis('#fFrom', R.resolved >= 0); dis('#fTo', R.resolved >= 0);
+  $('#fDup').value = S.filters.dup; $('#fPaid').value = S.filters.paid; $('#fDispute').value = S.filters.dispute; $('#fReviewed').value = S.filters.reviewed;
+  $('#fFrom').value = S.filters.from; $('#fTo').value = S.filters.to; $('#fMod').checked = S.filters.mod;
+  const ds = S.rows.map(r => r.ymd).filter(Boolean).sort();
+  $('#fFrom').min = $('#fTo').min = ds[0] || ''; $('#fFrom').max = $('#fTo').max = ds[ds.length - 1] || '';
+}
+function renderSummary(){
+  const s = S.stats;
+  $('#mTotal').textContent = num.format(s.total);
+  $('#mTotalSub').textContent = (s.hasAmt ? money.format(s.amount) + ' total' : '') + (s.noId ? (s.hasAmt ? ' · ' : '') + s.noId + ' without ID' : '');
+  $('#mGroups').textContent = num.format(s.groups);
+  $('#mGroupsSub').innerHTML = s.hasAmt ? '<span class="money">' + money.format(s.dupAmt) + '</span> earned from duplicates' : 'Interaction IDs paid more than once';
+  $('#mDups').textContent = num.format(s.dupRecs);
+  $('#mDupsSub').textContent = num.format(s.extra) + ' repeat payment' + (s.extra === 1 ? '' : 's') + ' beyond the first';
+  $('#mUnique').textContent = num.format(s.uniq);
+  $('#mUniqueSub').textContent = s.hasAmt ? money.format(s.uniqAmt) + ' · ID appears once' : 'ID appears exactly once';
+  $$('#app .card[data-act]').forEach(c => { c.disabled = S.roles.iid < 0; });
+}
+function renderChrome(){
+  $('#empty').hidden = S.headers.length > 0;
+  $('#app').hidden = S.headers.length === 0;
+  const fi = $('#fileInfo');
+  if (S.fileName){ fi.hidden = false; fi.textContent = S.fileName + ' · ' + (S.fileSize / 1024).toFixed(S.fileSize > 102400 ? 0 : 1) + ' KB'; fi.title = S.fileName; }
+  else fi.hidden = true;
+  const v = $('#btnValidate'), a = S.stats.attn;
+  v.className = 'btn attn ' + (a ? 'bad' : 'good');
+  v.innerHTML = (a ? ICON.warn : ICON.check) + '<span>' + (a ? num.format(a) + ' need attention' : 'No issues') + '</span>';
+  const u = $('#btnUnsaved'), ed = S.stats.mods, del = S.deleted.length;
+  u.hidden = !(ed || del);
+  if (ed || del) $('span', u).textContent = 'Unsaved changes · ' + [ed ? ed + ' edited' : '', del ? del + ' deleted' : ''].filter(Boolean).join(', ');
+}
+function renderChips(){
+  const f = S.filters, st = S.stats, noIid = S.roles.iid < 0;
+  const chips = [
+    ['all', 'All Records', st.total, f.dup === 'all' && f.paid === 'all' && f.dispute === 'all' && !activeFilterCount(), false],
+    ['dup', 'Duplicates Only', st.dupRecs, f.dup === 'dup', noIid],
+    ['unique', 'Unique Only', st.uniq, f.dup === 'unique', noIid],
+    ['paid', 'Paid', st.yes, f.paid === 'yes', S.roles.paid < 0],
+    ['unpaid', 'Unpaid', st.no, f.paid === 'no', S.roles.paid < 0],
+    ['disputed', 'Disputed', st.disp, f.dispute === 'yes', S.roles.dispute < 0]
+  ];
+  $('#chips').innerHTML = chips.map(c => '<button type="button" class="chip' + (c[4] ? '' : '') + (c[3] ? ' on' : '') + '" data-chip="' + c[0] + '"' + (c[4] ? ' disabled' : '') + ' aria-pressed="' + c[3] + '">' + c[1] + ' <span class="n">' + num.format(c[2]) + '</span></button>').join('');
+}
+function pageSlice(arr){
+  const pages = Math.max(1, Math.ceil(arr.length / S.pageSize));
+  if (S.page > pages) S.page = pages;
+  const start = (S.page - 1) * S.pageSize;
+  return {items:arr.slice(start, start + S.pageSize), pages, start};
+}
+function renderResults(){
+  renderChips();
+  const f = S.filters, n = activeFilterCount();
+  const fb = $('#filtBadge'); fb.hidden = !n; fb.textContent = n;
+  $('#btnClear').disabled = !n;
+  $$('#viewSeg button').forEach(b => b.classList.toggle('on', b.dataset.view === S.view));
+  $('#pageSize').value = String(S.pageSize);
+  const gk = S.view === 'groups' ? groupKeys() : null;
+  const total = S.view === 'groups' ? gk.length : S.filtered.length;
+  let sub = 0, hasSub = false; for (const r of S.filtered) if (!isNaN(r.amt)){ sub += r.amt; hasSub = true; }
+  $('#resCount').innerHTML = num.format(total) + (S.view === 'groups' ? ' duplicate group' + (total === 1 ? '' : 's') : ' of ' + num.format(S.rows.length) + ' records') + (hasSub ? ' <span>· ' + money.format(sub) + (n ? ' filtered' : '') + '</span>' : '');
+  const {items, pages, start} = pageSlice(S.view === 'groups' ? gk : S.filtered);
+  S.view === 'groups' ? renderGroupTable(items) : renderRecordTable(items);
+  const pg = $('#pager');
+  pg.hidden = total === 0;
+  pg.innerHTML = '<span>Showing ' + num.format(start + 1) + '–' + num.format(Math.min(start + S.pageSize, total)) + ' of ' + num.format(total) + '</span><span class="pg"><button class="btn sm" type="button" data-pg="-1"' + (S.page <= 1 ? ' disabled' : '') + '>Previous</button>Page ' + S.page + ' of ' + pages + '<button class="btn sm" type="button" data-pg="1"' + (S.page >= pages ? ' disabled' : '') + '>Next</button></span>';
+  // sort select for mobile
+  const opts = ['<option value="-1:1">Sort: original order</option>'];
+  S.visibleCols.forEach(c => { opts.push('<option value="' + c + ':1">' + esc(S.headers[c]) + ' ↑</option><option value="' + c + ':-1">' + esc(S.headers[c]) + ' ↓</option>'); });
+  const ss = $('#sortSel'); ss.innerHTML = opts.join(''); ss.value = S.sort.col + ':' + S.sort.dir; ss.hidden = S.view === 'groups';
+  const gs = $('#gSortSel'); gs.hidden = S.view !== 'groups'; gs.value = S.gSort;
+  $('#colsMenu').hidden || buildColsMenu();
+}
+function emptyRow(span){
+  const filt = activeFilterCount() > 0;
+  return '<tr><td colspan="' + span + '" style="max-width:none;white-space:normal;text-align:center;justify-content:center"><div class="empty"><strong>' + (S.rows.length ? 'No records match' : 'No records') + '</strong>' + (filt ? 'Try removing a filter. <br><br><button type="button" class="btn" data-act="clear">Clear filters</button>' : S.rows.length ? '' : 'This file has headers but no data rows.') + '</div></td></tr>';
+}
+function renderRecordTable(items){
+  const cols = S.visibleCols;
+  $('#thead').innerHTML = '<tr>' + cols.map(c => {
+    const on = S.sort.col === c, r = S.colRole[c];
+    return '<th data-col="' + c + '" class="' + (r === 'amount' ? 'num' : '') + '" tabindex="0" aria-sort="' + (on ? (S.sort.dir > 0 ? 'ascending' : 'descending') : 'none') + '">' + esc(S.headers[c]) + (on ? '<span class="ar">' + (S.sort.dir > 0 ? '▲' : '▼') + '</span>' : '') + '</th>';
+  }).join('') + '</tr>';
+  $('#tbody').innerHTML = items.length ? items.map(r => '<tr data-uid="' + r.uid + '" tabindex="0" class="' + (r.dupN > 1 ? 'is-dup' : '') + '">' + cols.map(c => cellHtml(r, c)).join('') + '</tr>').join('') : emptyRow(cols.length);
+}
+function cellHtml(r, c){
+  const role = S.colRole[c], v = r.v[c] == null ? '' : r.v[c], lab = ' data-label="' + esc(S.headers[c]) + '"';
+  if (role === 'iid'){
+    let h = '<span class="idwrap"><span class="idtxt' + (r.dupN > 1 ? ' dup' : '') + '">' + (v ? esc(v) : '<span class="muted">(empty)</span>') + '</span>';
+    if (r.dupN > 1) h += '<button type="button" class="dupbadge" data-act="group" data-key="' + esc(r.key) + '" title="Review all ' + r.dupN + ' records with this ID' + (S.groupAmt.get(r.key) ? ' (group total ' + money.format(S.groupAmt.get(r.key)) + ')' : '') + '">×' + r.dupN + (S.groupAmt.get(r.key) ? ' <span class="m">· ' + money.format(S.groupAmt.get(r.key)) + '</span>' : '') + '</button>';
+    if (S.reviewed.has(r.fp)) h += '<span class="tag ok" title="Reviewed">✓</span>';
+    if (r.mod) h += '<span class="dot warn" title="Edited"></span>';
+    if (r.issues.length) h += '<span class="tag warn" title="' + esc(r.issues.map(i => i.msg).join('\n')) + '">!</span>';
+    return '<td' + lab + '>' + h + '</span></td>';
+  }
+  if (role === 'paid') return '<td' + lab + '><span class="pill ' + (r.pay === 'yes' ? 'yes' : r.pay === 'no' ? 'no' : r.pay === 'other' ? 'odd' : '') + '">' + (esc(v) || '—') + '</span></td>';
+  if (role === 'amount') return '<td class="num"' + lab + '>' + esc(v) + '</td>';
+  if (role === 'dispute') return '<td' + lab + ' title="' + esc(v) + '">' + (v.trim() ? '<span class="pill disp">' + esc(v) + '</span>' : '<span class="muted">—</span>') + '</td>';
+  if (role === 'front'){ const u = safeUrl(v); return '<td' + lab + '>' + (u ? '<a class="lnk" href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">Open</a>' : '<span class="muted">—</span>') + '</td>'; }
+  return '<td' + lab + ' title="' + esc(v) + '">' + (esc(v) || '<span class="muted">—</span>') + '</td>';
+}
+function groupInfo(key){
+  const recs = S.groups.get(key) || [];
+  const agents = Array.from(new Set(recs.map(r => val(r, 'agent').trim()).filter(Boolean)));
+  const ds = recs.map(r => r.ymd).filter(Boolean).sort();
+  let amt = 0, has = false; for (const r of recs) if (!isNaN(r.amt)){ amt += r.amt; has = true; }
+  const rev = recs.filter(r => S.reviewed.has(r.fp)).length;
+  return {recs, agents, from:ds[0] || '', to:ds[ds.length - 1] || '', amt, has, rev, paid:recs.filter(r => r.pay === 'yes').length};
+}
+function renderGroupTable(keys){
+  $('#thead').innerHTML = '<tr><th style="cursor:default">Interaction ID</th><th style="cursor:default">Records</th><th style="cursor:default">Agents</th><th style="cursor:default">Paid</th><th class="num" style="cursor:default">Group total</th><th style="cursor:default">Period</th><th style="cursor:default">Reviewed</th></tr>';
+  $('#tbody').innerHTML = keys.length ? keys.map(k => {
+    const g = groupInfo(k), first = g.recs[0], id = S.roles.iid >= 0 ? first.v[S.roles.iid] : k;
+    const period = g.from ? (g.from === g.to ? g.from : g.from + ' → ' + g.to) : '—';
+    return '<tr class="is-dup" tabindex="0" data-gkey="' + esc(k) + '"><td data-label="Interaction ID"><span class="idtxt dup">' + esc(id) + '</span></td><td data-label="Records"><span class="dupbadge">×' + g.recs.length + '</span></td><td data-label="Agents" title="' + esc(g.agents.join(', ')) + '">' + esc(g.agents.join(', ') || '—') + '</td><td data-label="Paid">' + g.paid + ' / ' + g.recs.length + '</td><td class="num gt" data-label="Total">' + (g.has ? money.format(g.amt) : '—') + '</td><td data-label="Period">' + esc(period) + '</td><td data-label="Reviewed">' + (g.rev === g.recs.length ? '<span class="badge ok">Reviewed</span>' : g.rev ? '<span class="badge warn">' + g.rev + ' / ' + g.recs.length + '</span>' : '<span class="muted">No</span>') + '</td></tr>';
+  }).join('') : emptyRow(7);
+}
+function buildColsMenu(){
+  $('#colsMenu').innerHTML = '<div class="mh">Visible columns</div>' + S.headers.map((h, i) => '<label><input type="checkbox" data-col="' + i + '"' + (S.visibleCols.includes(i) ? ' checked' : '') + '> ' + esc(h) + '</label>').join('') + '<hr><button type="button" data-colreset="1">Reset to default</button>';
+}
+
+/* ---------- interactions ---------- */
+function setSort(col){
+  if (S.sort.col !== col){ S.sort = {col, dir:1}; }
+  else if (S.sort.dir === 1) S.sort.dir = -1;
+  else S.sort = {col:-1, dir:1};
+  S.page = 1; applyFilters(); renderResults();
+}
+function setFilter(k, v){ S.filters[k] = v; S.page = 1; applyFilters(); renderResults(); }
+function clearFilters(){
+  S.filters = {q:'', dup:'all', paid:'all', agent:'', channel:'', dispute:'all', reviewed:'all', from:'', to:'', issue:'', mod:false};
+  $('#q').value = ''; S.page = 1;
+  populateSelects(); applyFilters(); renderResults();
+}
+let qTimer = null;
+$('#q').addEventListener('input', e => { clearTimeout(qTimer); qTimer = setTimeout(() => setFilter('q', e.target.value.trim()), 60); });
+const bindSel = (id, k) => $(id).addEventListener('change', e => setFilter(k, e.target.value));
+bindSel('#fDup','dup'); bindSel('#fPaid','paid'); bindSel('#fAgent','agent'); bindSel('#fChannel','channel'); bindSel('#fDispute','dispute'); bindSel('#fReviewed','reviewed'); bindSel('#fFrom','from'); bindSel('#fTo','to');
+$('#fMod').addEventListener('change', e => setFilter('mod', e.target.checked));
+$('#btnClear').addEventListener('click', clearFilters);
+$('#btnFilters').addEventListener('click', () => { const f = $('#filters'); f.classList.toggle('open'); $('#btnFilters').setAttribute('aria-expanded', f.classList.contains('open')); });
+$('#pageSize').addEventListener('change', e => { S.pageSize = parseInt(e.target.value, 10); LS.set('ppi.pageSize', S.pageSize); S.page = 1; renderResults(); });
+$('#sortSel').addEventListener('change', e => { const [c, d] = e.target.value.split(':').map(Number); S.sort = c < 0 ? {col:-1, dir:1} : {col:c, dir:d}; S.page = 1; applyFilters(); renderResults(); });
+$('#gSortSel').addEventListener('change', e => { S.gSort = e.target.value; S.page = 1; renderResults(); });
+$('#viewSeg').addEventListener('click', e => { const b = e.target.closest('button[data-view]'); if (!b) return; S.view = b.dataset.view; S.page = 1; renderResults(); });
+$('#chips').addEventListener('click', e => {
+  const b = e.target.closest('[data-chip]'); if (!b) return;
+  const k = b.dataset.chip, f = S.filters;
+  if (k === 'all'){ clearFilters(); return; }
+  const tog = (key, v) => { f[key] = f[key] === v ? (key === 'dup' ? 'all' : 'all') : v; };
+  if (k === 'dup') tog('dup', 'dup'); else if (k === 'unique') tog('dup', 'unique');
+  else if (k === 'paid') tog('paid', 'yes'); else if (k === 'unpaid') tog('paid', 'no'); else if (k === 'disputed') tog('dispute', 'yes');
+  S.page = 1; populateSelects(); applyFilters(); renderResults();
+});
+$('#pager').addEventListener('click', e => { const b = e.target.closest('[data-pg]'); if (!b) return; S.page += parseInt(b.dataset.pg, 10); renderResults(); $('#tableWrap').scrollTop = 0; });
+$('#thead').addEventListener('click', e => { const th = e.target.closest('th[data-col]'); if (th) setSort(parseInt(th.dataset.col, 10)); });
+$('#thead').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ const th = e.target.closest('th[data-col]'); if (th){ e.preventDefault(); setSort(parseInt(th.dataset.col, 10)); } } });
+$('#tbody').addEventListener('click', e => {
+  const act = e.target.closest('[data-act]');
+  if (act && act.dataset.act === 'group'){ e.stopPropagation(); openGroup(act.dataset.key); return; }
+  if (act && act.dataset.act === 'clear'){ clearFilters(); return; }
+  if (e.target.closest('a')) return;
+  const tr = e.target.closest('tr');
+  if (!tr) return;
+  if (tr.dataset.gkey) openGroup(tr.dataset.gkey);
+  else if (tr.dataset.uid) openDrawer(parseInt(tr.dataset.uid, 10));
+});
+$('#tbody').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'TR') e.target.click(); });
+$('#app').addEventListener('click', e => {
+  const c = e.target.closest('.card[data-act]'); if (!c) return;
+  const a = c.dataset.act;
+  if (a === 'card-groups'){ S.view = 'groups'; S.filters.dup = 'dup'; }
+  else if (a === 'card-dups'){ S.view = 'records'; S.filters.dup = 'dup'; }
+  else { S.view = 'records'; S.filters.dup = 'unique'; }
+  S.page = 1; populateSelects(); applyFilters(); renderResults();
+});
+$('#banner').addEventListener('click', e => { if (e.target.closest('[data-act="dismiss"]')) $('#banner').innerHTML = ''; });
+$('#btnUnsaved').addEventListener('click', async () => {
+  const v = await dlg({title:'Unsaved changes', message:'<p style="margin:0">' + S.stats.mods + ' record(s) edited and ' + S.deleted.length + ' deleted since import. Your original file on disk is never modified. Export to save your changes.</p>', actions:[{label:'Close', value:null}, {label:'Show edited', value:'show'}, {label:'Revert all changes', value:'revert', kind:'danger'}]});
+  if (v === 'show'){ S.filters.mod = true; S.page = 1; populateSelects(); applyFilters(); renderResults(); }
+  else if (v === 'revert'){
+    const ok = await confirmDlg('Revert all changes?', 'All edits are undone and deleted records are restored to the imported state.', 'Revert', true);
+    if (ok) revertAll();
+  }
+});
+function revertAll(){
+  closeDrawer(true);
+  S.rows = S.origList.map(r => makeRow(r.uid, r.orig, r.fp, r.oi));
+  S.byUid = new Map(S.rows.map(r => [r.uid, r])); S.origList = S.rows.slice(); S.deleted = []; S.dirty = false;
+  refresh(); if (S.gKey) renderGroup();
+  toast('All changes reverted', {type:'success'});
+}
+
+/* columns menu */
+$('#btnCols').addEventListener('click', e => { e.stopPropagation(); toggleMenu('#colsMenu', '#btnCols'); });
+$('#colsMenu').addEventListener('click', e => e.stopPropagation());
+$('#colsMenu').addEventListener('change', e => {
+  const cb = e.target.closest('input[data-col]'); if (!cb) return;
+  const c = parseInt(cb.dataset.col, 10), set = new Set(S.visibleCols);
+  if (cb.checked) set.add(c); else if (set.size > 1) set.delete(c); else cb.checked = true;
+  S.visibleCols = Array.from(set).sort((a, b) => a - b);
+  if (S.sort.col >= 0 && !set.has(S.sort.col)) S.sort = {col:-1, dir:1};
+  applyFilters(); renderResults();
+});
+$('#colsMenu').addEventListener('click', e => {
+  if (e.target.closest('[data-colreset]')){
+    const def = ['resolved','iid','agent','paid','type','level','amount','reason','dispute'].map(k => S.roles[k]).filter(i => i >= 0);
+    S.visibleCols = def.length >= 3 ? def.sort((a, b) => a - b) : S.headers.map((_, i) => i).slice(0, 9);
+    buildColsMenu(); applyFilters(); renderResults();
+  }
+});
+function toggleMenu(menu, btn){
+  const m = $(menu), open = m.hidden;
+  closeMenus();
+  if (open){ if (menu === '#colsMenu') buildColsMenu(); if (menu === '#exportMenu') buildExportMenu(); m.hidden = false; $(btn).setAttribute('aria-expanded', 'true'); }
+}
+function closeMenus(){ ['#exportMenu', '#colsMenu'].forEach(m => $(m).hidden = true); $('#btnExport').setAttribute('aria-expanded', 'false'); $('#btnCols').setAttribute('aria-expanded', 'false'); }
+document.addEventListener('click', e => { if (!e.target.closest('.menu-wrap')) closeMenus(); });
+
+/* ---------- export ---------- */
+function download(name, text){
+  const blob = new Blob(['\uFEFF' + text], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+}
+function exportRows(rows, name, label, clearDirty){
+  if (!rows.length){ toast('Nothing to export for ' + label, {type:'error'}); return; }
+  download(name, serializeCSV(S.headers, rows.map(r => r.v)));
+  if (clearDirty) S.dirty = false;
+  toast('Exported ' + num.format(rows.length) + ' records to ' + name, {type:'success'});
+}
+function buildExportMenu(){
+  const st = S.stats, items = [
+    ['all', 'Export all records', S.rows.length], ['filtered', 'Export current filtered results', S.filtered.length],
+    ['dup', 'Export duplicate records only', st.dupRecs], ['unique', 'Export unique records only', st.uniq], ['summary', 'Export duplicate group totals (summary)', st.groups]
+  ];
+  let h = items.map(i => '<button type="button" role="menuitem" data-exp="' + i[0] + '"' + (i[2] ? '' : ' disabled') + '><span>' + i[1] + '</span><span class="cnt">' + num.format(i[2]) + '</span></button>').join('');
+  if (st.mods || S.deleted.length) h += '<hr><button type="button" role="menuitem" data-exp="mod"' + (st.mods ? '' : ' disabled') + '><span>Edited records only</span><span class="cnt">' + st.mods + '</span></button><button type="button" role="menuitem" data-exp="orig"><span>Original import (unedited)</span><span class="cnt">' + S.origList.length + '</span></button>';
+  $('#exportMenu').innerHTML = S.headers.length ? h : '<div class="mh" style="padding:10px">Import a CSV first</div>';
+}
+$('#btnExport').addEventListener('click', e => { e.stopPropagation(); toggleMenu('#exportMenu', '#btnExport'); });
+$('#exportMenu').addEventListener('click', e => {
+  const b = e.target.closest('[data-exp]'); if (!b || b.disabled) return;
+  closeMenus();
+  const k = b.dataset.exp;
+  if (k === 'all') exportRows(S.rows, 'pay-per-item-all-records.csv', 'all records', true);
+  else if (k === 'filtered') exportRows(S.filtered, 'pay-per-item-filtered.csv', 'filtered results');
+  else if (k === 'dup') exportRows(S.rows.filter(r => r.dupN > 1), 'pay-per-item-duplicates.csv', 'duplicates');
+  else if (k === 'unique') exportRows(S.rows.filter(r => r.dupN === 1), 'pay-per-item-unique.csv', 'unique records');
+  else if (k === 'summary'){
+    const R = S.roles, hd = ['Interaction ID', 'Payments', 'Total Amount USD', 'Agents', 'First Resolved', 'Last Resolved'];
+    const lines = Array.from(S.groups.keys()).sort((a, b) => (S.groupAmt.get(b) || 0) - (S.groupAmt.get(a) || 0)).map(k2 => { const g = groupInfo(k2); return [R.iid >= 0 ? g.recs[0].v[R.iid] : k2, g.recs.length, (S.groupAmt.get(k2) || 0).toFixed(2), g.agents.join('; '), g.from, g.to]; });
+    download('pay-per-item-duplicate-group-totals.csv', serializeCSV(hd, lines));
+    toast('Exported totals for ' + lines.length + ' duplicate groups', {type:'success'});
+  }
+  else if (k === 'mod') exportRows(S.rows.filter(r => r.mod), 'pay-per-item-edited.csv', 'edited records');
+  else if (k === 'orig'){ if (S.origList.length){ download('pay-per-item-original.csv', serializeCSV(S.headers, S.origList.map(r => r.orig))); toast('Exported the original import', {type:'success'}); } }
+});
+
+/* ---------- group review ---------- */
+const GROUP_ROLES = ['iid','resolved','agent','paid','type','level','amount','reason','replied','dispute','front'];
+function groupCols(){
+  const c = GROUP_ROLES.map(k => S.roles[k]).filter(i => i >= 0);
+  return c.length >= 3 ? c : S.headers.map((_, i) => i);
+}
+function fieldHtml(r, c){
+  const v = r.v[c] == null ? '' : r.v[c];
+  if (S.colRole[c] === 'front'){ const u = safeUrl(v); return u ? '<a class="lnk" href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">Open in Front ↗</a>' : (esc(v) || '<span class="muted">—</span>'); }
+  return esc(v) || '<span class="muted">—</span>';
+}
+function openGroup(key){
+  if (!S.groups.has(key)) return;
+  S.gKey = key; renderGroup(); $('#groupOv').hidden = false;
+}
+function closeGroup(){ S.gKey = null; $('#groupOv').hidden = true; }
+function renderGroup(){
+  const key = S.gKey, recs = S.groups.get(key);
+  if (!recs){ closeGroup(); return; }
+  const cols = groupCols(), idShown = S.roles.iid >= 0 ? recs[0].v[S.roles.iid] : key;
+  const diffCols = new Set(cols.filter(c => new Set(recs.map(r => String(r.v[c]).trim())).size > 1));
+  const allRev = recs.every(r => S.reviewed.has(r.fp));
+  const keys = groupKeys(), idx = keys.indexOf(key);
+  const link = recs.map(r => safeUrl(val(r, 'front'))).find(Boolean);
+  let body;
+  if (S.gLayout === 'side'){
+    body = '<div style="overflow:auto"><table class="cmp"><thead><tr><th class="rl"></th>' + recs.map((r, i) => '<th>#' + (i + 1) + ' · ' + esc(r.v[S.roles.resolved] || '') + '</th>').join('') + '</tr></thead><tbody>' +
+      cols.map(c => '<tr><th class="rl">' + esc(S.headers[c]) + '</th>' + recs.map(r => '<td class="' + (diffCols.has(c) ? 'diff' : '') + '">' + fieldHtml(r, c) + '</td>').join('') + '</tr>').join('') +
+      '<tr><th class="rl">Reviewed</th>' + recs.map(r => '<td><label class="chkl"><input type="checkbox" data-rev="' + r.uid + '"' + (S.reviewed.has(r.fp) ? ' checked' : '') + '> Reviewed</label> <button class="btn sm" type="button" data-open="' + r.uid + '">Details</button></td>').join('') + '</tr></tbody></table></div>';
+  } else {
+    body = '<div class="gcards">' + recs.map((r, i) => '<article class="gcard"><header><strong>Record ' + (i + 1) + ' of ' + recs.length + '</strong>' + (r.mod ? '<span class="badge warn">Edited</span>' : '') + '<span class="sp"></span><label class="chkl"><input type="checkbox" data-rev="' + r.uid + '"' + (S.reviewed.has(r.fp) ? ' checked' : '') + '> Reviewed</label><button class="btn sm" type="button" data-open="' + r.uid + '">Details</button></header><dl>' +
+      cols.map(c => '<div class="f' + (diffCols.has(c) ? ' diff' : '') + '"><dt>' + esc(S.headers[c]) + '</dt><dd>' + fieldHtml(r, c) + '</dd></div>').join('') + '</dl></article>').join('') + '</div>';
+  }
+  $('#groupModal').innerHTML =
+    '<div class="modal-h"><span class="gid">' + esc(idShown) + '</span><span class="badge dup">' + recs.length + ' payments</span><span class="badge dup">' + money.format(S.groupAmt.get(key) || 0) + ' total</span>' + (allRev ? '<span class="badge ok">Reviewed</span>' : '') +
+    '<span style="flex:1"></span>' +
+    (keys.length > 1 ? '<button class="btn sm" type="button" data-gnav="-1" title="Previous group"' + (idx <= 0 ? ' disabled' : '') + '>‹ Prev</button><span class="muted" style="font-size:12px">' + (idx >= 0 ? (idx + 1) + ' / ' + keys.length : '') + '</span><button class="btn sm" type="button" data-gnav="1" title="Next group"' + (idx < 0 || idx >= keys.length - 1 ? ' disabled' : '') + '>Next ›</button>' : '') +
+    '<button class="x" type="button" data-gclose aria-label="Close">×</button></div>' +
+    '<div class="gacts"><button class="btn sm" type="button" data-gact="copy">' + ICON.copy + 'Copy Interaction ID</button>' +
+    '<button class="btn sm" type="button" data-gact="front"' + (link ? '' : ' disabled') + '>' + ICON.ext + 'Open Front Conversation</button>' +
+    '<button class="btn sm" type="button" data-gact="export">' + ICON.dl + 'Export This Group</button>' +
+    '<button class="btn sm' + (allRev ? '' : ' primary') + '" type="button" data-gact="review">' + (allRev ? 'Reviewed ✓ (undo)' : 'Mark as Reviewed') + '</button><span class="sp"></span>' +
+    '<div class="seg"><button type="button" data-glay="stack" class="' + (S.gLayout === 'stack' ? 'on' : '') + '">Stacked</button><button type="button" data-glay="side" class="' + (S.gLayout === 'side' ? 'on' : '') + '">Side by side</button></div></div>' +
+    '<div class="gsum"><span>Total accumulated: <b class="money">' + money.format(S.groupAmt.get(key) || 0) + '</b></span><span>Paid records: <b>' + recs.filter(r => r.pay === 'yes').length + ' / ' + recs.length + '</b></span><span>Average: <b>' + money.format((S.groupAmt.get(key) || 0) / recs.length) + '</b></span></div><div class="modal-b"><p class="legend">' + (diffCols.size ? '<mark>Highlighted</mark> fields differ between these records: ' + Array.from(diffCols).map(c => esc(S.headers[c])).join(', ') + '.' : 'All shown fields are identical across these records.') + ' Repeated IDs usually mean several payments on one interaction, so they are added up, never removed.</p>' + body + '</div>';
+}
+function copyText(t){
+  if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(t);
+  return new Promise((res, rej) => {
+    const ta = document.createElement('textarea'); ta.value = t; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy') ? res() : rej(); } catch (e) { rej(e); } ta.remove();
+  });
+}
+function setReviewed(recs, on){ recs.forEach(r => on ? S.reviewed.add(r.fp) : S.reviewed.delete(r.fp)); saveReviewed(); }
+$('#groupModal').addEventListener('click', e => {
+  const t = e.target, recs = S.groups.get(S.gKey) || [];
+  if (t.closest('[data-gclose]')){ closeGroup(); return; }
+  const lay = t.closest('[data-glay]'); if (lay){ S.gLayout = lay.dataset.glay; renderGroup(); return; }
+  const nav = t.closest('[data-gnav]'); if (nav){ const keys = groupKeys(), i = keys.indexOf(S.gKey) + parseInt(nav.dataset.gnav, 10); if (keys[i]){ S.gKey = keys[i]; renderGroup(); $('#groupModal .modal-b').scrollTop = 0; } return; }
+  const op = t.closest('[data-open]'); if (op){ openDrawer(parseInt(op.dataset.open, 10)); return; }
+  const act = t.closest('[data-gact]'); if (!act) return;
+  const a = act.dataset.gact;
+  if (a === 'copy'){ const id = S.roles.iid >= 0 ? recs[0].v[S.roles.iid] : S.gKey; copyText(id).then(() => toast('Copied ' + id, {type:'success'}), () => toast('Copy failed', {type:'error'})); }
+  else if (a === 'front'){ const u = recs.map(r => safeUrl(val(r, 'front'))).find(Boolean); if (u) window.open(u, '_blank', 'noopener,noreferrer'); }
+  else if (a === 'export'){ const id = (S.roles.iid >= 0 ? recs[0].v[S.roles.iid] : S.gKey).replace(/[^\w.-]+/g, '_'); exportRows(recs, 'pay-per-item-duplicate-' + id + '.csv', 'this group'); }
+  else if (a === 'review'){ const all = recs.every(r => S.reviewed.has(r.fp)); setReviewed(recs, !all); toast(all ? 'Review status cleared' : 'Group marked as reviewed', {type:'success'}); renderGroup(); applyFilters(); renderResults(); }
+});
+$('#groupModal').addEventListener('change', e => {
+  const cb = e.target.closest('[data-rev]'); if (!cb) return;
+  const r = S.byUid.get(parseInt(cb.dataset.rev, 10)); if (!r) return;
+  setReviewed([r], cb.checked); renderGroup(); applyFilters(); renderResults();
+});
+$('#groupOv').addEventListener('mousedown', e => { if (e.target === $('#groupOv')) closeGroup(); });
+
+/* ---------- record drawer ---------- */
+function openDrawer(uid){
+  if (S.dDirty && S.dUid !== uid){ confirmDlg('Discard edits?', 'You have unsaved edits on this record.', 'Discard', true).then(ok => { if (ok){ S.dDirty = false; openDrawer(uid); } }); return; }
+  const r = S.byUid.get(uid); if (!r) return;
+  S.dUid = uid; S.dDirty = false; renderDrawer();
+  $('#drawer').hidden = false; $('#dov').hidden = false;
+}
+function renderDrawer(){
+  const r = S.byUid.get(S.dUid); if (!r){ closeDrawer(true); return; }
+  const idx = S.filtered.indexOf(r), id = S.roles.iid >= 0 ? r.v[S.roles.iid] : 'Record';
+  const u = safeUrl(val(r, 'front')), rev = S.reviewed.has(r.fp);
+  const fields = S.headers.map((h, i) => {
+    const v = r.v[i] == null ? '' : r.v[i], long = v.length > 60 || /\n/.test(v) || ['subject','reason','replied','dispute'].includes(S.colRole[i]);
+    const ch = v !== r.orig[i];
+    return '<div class="fld' + (ch ? ' changed' : '') + '"><label for="f_' + i + '">' + esc(h) + '</label>' +
+      (long ? '<textarea id="f_' + i + '" data-i="' + i + '" rows="2">' + esc(v) + '</textarea>' : '<input id="f_' + i + '" data-i="' + i + '" value="' + esc(v) + '"' + (S.colRole[i] === 'amount' ? ' inputmode="decimal"' : '') + '>') +
+      (ch ? '<div class="orig">Original: ' + (esc(r.orig[i]) || '(empty)') + '</div>' : '') + '</div>';
+  }).join('');
+  $('#drawer').innerHTML =
+    '<div class="drawer-h"><div class="row"><h2 class="' + (r.dupN > 1 ? 'dup' : '') + '">' + esc(id || '(empty ID)') + '</h2><span style="flex:1"></span>' +
+    '<button class="btn sm icon" type="button" data-d="prev" aria-label="Previous record"' + (idx <= 0 ? ' disabled' : '') + '>‹</button><button class="btn sm icon" type="button" data-d="next" aria-label="Next record"' + (idx < 0 || idx >= S.filtered.length - 1 ? ' disabled' : '') + '>›</button><button class="x" type="button" data-d="close" aria-label="Close">×</button></div>' +
+    '<div class="row">' + (r.dupN > 1 ? '<button type="button" class="badge dup" data-d="group" style="border:0">' + r.dupN + ' payments · ' + money.format(S.groupAmt.get(r.key) || 0) + ' total · review group</button>' : r.dupN === 1 ? '<span class="badge ok">Unique</span>' : '') + (rev ? '<span class="badge ok">Reviewed</span>' : '') + (r.mod ? '<span class="badge warn">Edited</span>' : '') + '</div></div>' +
+    '<div class="drawer-b">' + (r.issues.length ? '<div class="issues"><strong>Needs attention</strong><ul>' + r.issues.map(i => '<li>' + esc(i.msg) + '</li>').join('') + '</ul></div>' : '') + fields + '</div>' +
+    '<div class="drawer-f"><button class="btn primary" type="button" data-d="save" disabled>Save changes</button><button class="btn" type="button" data-d="revert"' + (r.mod ? '' : ' disabled') + '>Restore original</button>' +
+    (u ? '<a class="btn" href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">' + ICON.ext + 'Front</a>' : '') +
+    '<button class="btn" type="button" data-d="review">' + (rev ? 'Unmark reviewed' : 'Mark reviewed') + '</button><span class="sp"></span><button class="btn danger" type="button" data-d="delete">Delete</button></div>';
+}
+function closeDrawer(force){
+  if (!force && S.dDirty){
+    confirmDlg('Discard edits?', 'You have unsaved edits on this record.', 'Discard', true).then(ok => { if (ok) closeDrawer(true); });
+    return;
+  }
+  S.dUid = null; S.dDirty = false; $('#drawer').hidden = true; $('#dov').hidden = true;
+}
+$('#dov').addEventListener('mousedown', () => closeDrawer());
+$('#drawer').addEventListener('input', e => {
+  const el = e.target.closest('[data-i]'); if (!el) return;
+  S.dDirty = $$('#drawer [data-i]').some(x => x.value !== (S.byUid.get(S.dUid).v[+x.dataset.i] || ''));
+  const sv = $('#drawer [data-d="save"]'); if (sv) sv.disabled = !S.dDirty;
+});
+$('#drawer').addEventListener('click', async e => {
+  const b = e.target.closest('[data-d]'); if (!b) return;
+  const a = b.dataset.d, r = S.byUid.get(S.dUid); if (!r) return;
+  if (a === 'close') closeDrawer();
+  else if (a === 'prev' || a === 'next'){ const i = S.filtered.indexOf(r) + (a === 'next' ? 1 : -1); if (S.filtered[i]) openDrawer(S.filtered[i].uid); }
+  else if (a === 'group'){ const k = r.key; if (S.dDirty){ if (!(await confirmDlg('Discard edits?', 'You have unsaved edits on this record.', 'Discard', true))) return; } closeDrawer(true); openGroup(k); }
+  else if (a === 'save'){
+    const before = r.key;
+    $$('#drawer [data-i]').forEach(x => { r.v[+x.dataset.i] = x.value; });
+    derive(r); S.dDirty = false; S.dirty = true; refresh(); renderDrawer(); if (S.gKey) renderGroup();
+    toast(before !== r.key ? 'Saved. Duplicate groups recalculated.' : 'Record saved', {type:'success'});
+  }
+  else if (a === 'revert'){ r.v = r.orig.slice(); derive(r); S.dDirty = false; S.dirty = S.stats.mods > 1 || S.deleted.length > 0; refresh(); renderDrawer(); if (S.gKey) renderGroup(); toast('Original values restored', {type:'success'}); }
+  else if (a === 'review'){ setReviewed([r], !S.reviewed.has(r.fp)); renderDrawer(); applyFilters(); renderResults(); if (S.gKey) renderGroup(); }
+  else if (a === 'delete'){
+    const ok = await confirmDlg('Delete this record?', 'Record <strong>' + esc(S.roles.iid >= 0 ? r.v[S.roles.iid] : '#' + r.uid) + '</strong> will be removed from the dataset and from exports. You can undo right after.', 'Delete', true);
+    if (!ok) return;
+    deleteRecord(r);
+  }
+});
+function deleteRecord(r){
+  const i = S.rows.indexOf(r); if (i < 0) return;
+  S.rows.splice(i, 1); S.byUid.delete(r.uid); S.deleted.push(r); S.dirty = true;
+  S.dDirty = false; closeDrawer(true);
+  refresh(); if (S.gKey) renderGroup();
+  toast('Record deleted. Counts updated.', {action:{label:'Undo', fn:() => {
+    const k = S.deleted.indexOf(r); if (k < 0) return;
+    S.deleted.splice(k, 1); S.rows.push(r); S.rows.sort((a, b) => a.oi - b.oi); S.byUid.set(r.uid, r);
+    S.dirty = S.deleted.length > 0 || S.rows.some(x => x.mod);
+    refresh(); if (S.gKey) renderGroup(); toast('Record restored', {type:'success'});
+  }}});
+}
+
+/* ---------- validation modal ---------- */
+$('#btnValidate').addEventListener('click', () => {
+  const st = S.stats, rows = Object.keys(ISSUE_LABEL).filter(k => st.issueCounts[k]);
+  $('#valModal').innerHTML = '<div class="modal-h"><h2>Data validation</h2><span style="flex:1"></span><button class="x" type="button" data-v="close" aria-label="Close">×</button></div><div class="modal-b">' +
+    (rows.length ? '<p class="muted" style="margin-top:0">' + num.format(st.attn) + ' record' + (st.attn === 1 ? '' : 's') + ' may need a look. Nothing is changed automatically.</p><div class="vlist">' + rows.map(k => '<div class="vitem"><span class="t">' + esc(ISSUE_LABEL[k]) + '</span><span class="c">' + num.format(st.issueCounts[k]) + '</span><button class="btn sm" type="button" data-v="' + k + '">Show</button></div>').join('') + '</div>' : '<p style="margin-top:0">No problems found in the current data.</p>') +
+    '<p class="muted" style="font-size:12.5px;margin-bottom:0">Duplicate Interaction IDs are reviewed separately and are not counted here. Missing columns: ' + (ROLE_ORDER.filter(k => S.roles[k] < 0).map(k => ROLE_LABEL[k]).join(', ') || 'none') + '.</p></div>' +
+    (rows.length ? '<div class="modal-f"><button class="btn primary" type="button" data-v="any">Show all ' + num.format(st.attn) + ' records</button></div>' : '');
+  $('#valOv').hidden = false;
+});
+$('#valModal').addEventListener('click', e => {
+  const b = e.target.closest('[data-v]'); if (!b) return;
+  $('#valOv').hidden = true;
+  if (b.dataset.v === 'close') return;
+  S.filters.issue = b.dataset.v; S.view = 'records'; S.page = 1; applyFilters(); renderResults();
+  toast('Showing: ' + (b.dataset.v === 'any' ? 'all records needing attention' : ISSUE_LABEL[b.dataset.v]), {action:{label:'Clear', fn:() => setFilter('issue', '')}});
+});
+$('#valOv').addEventListener('mousedown', e => { if (e.target === $('#valOv')) $('#valOv').hidden = true; });
+
+/* ---------- import wiring ---------- */
+const fileInput = $('#fileInput');
+$('#btnImport').addEventListener('click', () => fileInput.click());
+$('#btnImport2').addEventListener('click', e => { e.stopPropagation(); fileInput.click(); });
+$('#empty').addEventListener('click', () => fileInput.click());
+$('#empty').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); fileInput.click(); } });
+fileInput.addEventListener('change', () => { const f = fileInput.files[0]; fileInput.value = ''; importFile(f); });
+let dragN = 0;
+const hasFiles = e => e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
+window.addEventListener('dragenter', e => { if (!hasFiles(e)) return; e.preventDefault(); dragN++; $('#dropOv').hidden = false; });
+window.addEventListener('dragover', e => { if (hasFiles(e)) e.preventDefault(); });
+window.addEventListener('dragleave', e => { if (!hasFiles(e)) return; dragN = Math.max(0, dragN - 1); if (!dragN) $('#dropOv').hidden = true; });
+window.addEventListener('drop', e => { if (!hasFiles(e)) return; e.preventDefault(); dragN = 0; $('#dropOv').hidden = true; const f = e.dataTransfer.files[0]; if (f) importFile(f); });
+
+/* ---------- keyboard ---------- */
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f' && S.headers.length){
+    e.preventDefault(); const q = $('#q'); q.focus(); q.select(); return;
+  }
+  if (e.key === '/' && S.headers.length && !/INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || '')){ e.preventDefault(); $('#q').focus(); return; }
+  if (e.key !== 'Escape') return;
+  if (!$('#dlgOv').hidden) closeDlg(false);
+  else if (!$('#valOv').hidden) $('#valOv').hidden = true;
+  else if (!$('#exportMenu').hidden || !$('#colsMenu').hidden) closeMenus();
+  else if (!$('#drawer').hidden) closeDrawer();
+  else if (!$('#groupOv').hidden) closeGroup();
+});
+window.addEventListener('beforeunload', e => { if (S.dirty){ e.preventDefault(); e.returnValue = ''; } });
+if (window.__noPapa) toast('PapaParse CDN unavailable. Using the built-in CSV parser.', {ms:5000});
+window.addEventListener('load', () => { if (window.__noPapa || !window.Papa) toast('Offline: using the built-in CSV parser.', {ms:4500}); });
+renderChrome();
+})();
+</script>
+</body>
+</html>
