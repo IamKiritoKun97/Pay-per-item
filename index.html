@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pay Tracker</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%234ade80'/%3E%3Cstop offset='1' stop-color='%2315803d'/%3E%3C/linearGradient%3E%3ClinearGradient id='b' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%231c2a22'/%3E%3Cstop offset='1' stop-color='%2311141a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='15' fill='url(%23b)'/%3E%3Ccircle cx='25' cy='25' r='14' fill='none' stroke='%234ade80' stroke-opacity='.5' stroke-width='4'/%3E%3Ccircle cx='38' cy='38' r='15' fill='url(%23g)'/%3E%3Ctext x='38' y='45.5' font-size='20' font-weight='800' text-anchor='middle' fill='%23072412' font-family='system-ui,sans-serif'%3E$%3C/text%3E%3C/svg%3E">
+<meta name="theme-color" content="#14161c">
+<style>
+:root{--bg:#14161c;--card:#1c1f27;--line:#2c303a;--tx:#e8eaf0;--mut:#8b91a0;--ok:#4ade80;--bad:#f87171;--acc:#facc15;--blue:#3b82f6}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 system-ui,Segoe UI,Roboto,sans-serif;padding:20px}
+.wrap{max-width:1100px;margin:auto}h1{margin:0 0 4px;font-size:22px}.sub{color:var(--mut);margin-bottom:16px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px}
+button,select,input{background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font:inherit}
+button{cursor:pointer}button:hover{border-color:var(--mut)}button.pri{background:var(--blue);border-color:var(--blue)}button.dan{color:var(--bad)}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;overflow-x:auto}
+.card .l{color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:.04em}.card .v{font-size:26px;font-weight:700;margin-top:2px}
+.card .s{color:var(--mut);font-size:12px}.hl{border-color:var(--acc);background:#2e2a10}.hl .v{color:var(--acc)}
+h2{font-size:15px;margin:22px 0 8px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
+table{width:100%;border-collapse:collapse}th,td{padding:9px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--mut);font-size:12px;text-transform:uppercase}td.n,th.n{text-align:right}
+.now td{background:#1e2a4a}.badge{font-size:11px;padding:2px 8px;border-radius:99px}.b-ok{background:#14351f;color:var(--ok)}.b-no{background:#3a1717;color:var(--bad)}
+.b-now{background:var(--blue);color:#fff;margin-left:6px}.gain{color:var(--ok)}.mut{color:var(--mut)}
+.two{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.bars div.r{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}.bars .t{flex:0 0 190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bars .b{flex:1;background:#262a34;border-radius:4px;height:10px}.bars .b i{display:block;height:100%;background:var(--blue);border-radius:4px}.bars .x{flex:0 0 90px;text-align:right}
+.scroll{overflow-x:auto}.empty{padding:40px;text-align:center;color:var(--mut);border:2px dashed var(--line);border-radius:12px}
+.drop{outline:2px dashed var(--blue)}a{color:#38bdf8}svg text{fill:var(--mut);font-size:11px}
+.grn{border-color:#22c55e;background:linear-gradient(135deg,#0f2e1b,#143a22)}.grn .v{color:#4ade80}
+tr.dup td{background:rgba(34,197,94,.08)}tr.dup td:first-child{box-shadow:inset 3px 0 #22c55e}
+.chips{gap:8px}.chip{border-radius:99px;padding:6px 14px;color:var(--mut)}.chip b{margin-left:7px;color:var(--tx);opacity:.75}
+.chip.on{background:var(--blue);border-color:var(--blue);color:#fff}.chip.g.on{background:#16a34a;border-color:#22c55e}
+.b-dup{background:#14351f;color:var(--ok)}.b-uni{background:#262a34;color:var(--mut)}.b-warn{background:#3a2e0e;color:var(--acc);margin-left:4px}
+.badge+.badge,.cp+.badge{margin-left:6px}tr.gr{cursor:pointer}tr.gr:hover td{filter:brightness(1.25)}tr.subr td{background:#171a21;font-size:13px}tr.sec td{background:#232733;padding:12px 10px}tr.sec.dup td{background:#12301d;color:var(--ok)}
+</style></head><body><div class="wrap" id="app">
+<h1>Pay Tracker</h1><div class="sub">Import your pay-per-item CSV, track progress by shift, and export anytime. Data stays in this browser.</div>
+<div class="bar">
+<button class="pri" id="bImp">Import CSV (merge)</button><button id="bRep">Import (replace all)</button>
+<button id="bExp">Export CSV</button><button class="dan" id="bClr">Clear data</button>
+<input type="file" id="file" accept=".csv,text/csv" hidden>
+<span class="mut">View</span>
+<select id="week"></select>
+<select id="mode"><option value="shift">Group by shift (10PM–6AM)</option><option value="cal">Group by calendar day</option></select>
+<label class="mut">₱/USD <input id="rate" type="number" step="0.01" style="width:90px"></label>
+</div>
+<div class="bar mut" id="cfg"></div>
+<div id="out"></div></div>
+<script>
+const COLS=["Resolved (PHT)","Interaction ID","Conversation","Front link","Channel","Agent","Paid","Type of work","Level","Amount USD","Reason","Replied","Subject","Dispute"];
+let off=[4,5],hrs=8,adj={},sortK="t",sortD=-1,rows=[],mode="shift",wk="all",rate=63.31,importMode="merge",fsel="all",q="",gmode="rows",opn={};
+const $=id=>document.getElementById(id),usd=n=>"$"+n.toFixed(2),php=n=>"₱"+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const DN=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],MN=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function parseCSV(t){t=t.replace(/^\uFEFF/,"");const out=[];let r=[],f="",inq=false;
+for(let i=0;i<t.length;i++){const c=t[i];
+if(inq){if(c=='"'){if(t[i+1]=='"'){f+='"';i++}else inq=false}else f+=c}
+else if(c=='"')inq=true;else if(c==","){r.push(f);f=""}
+else if(c=="\n"||c=="\r"){if(c=="\r"&&t[i+1]=="\n")i++;r.push(f);f="";if(r.length>1||r[0]!=="")out.push(r);r=[]}else f+=c}
+if(f!==""||r.length){r.push(f);out.push(r)}
+const h=out.shift()||[];return out.map(a=>{const o={};h.forEach((k,i)=>o[k.trim()]=a[i]??"");return o})}
+const toCSV=a=>"\uFEFF"+[COLS,...a.map(r=>COLS.map(c=>r[c]??""))].map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(",")).join("\r\n");
+function dayKey(r){const s=r["Resolved (PHT)"],d=s.slice(0,10);if(mode==="cal")return d;
+if(+s.slice(11,13)<22){const x=new Date(Date.UTC(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10)-1));return x.toISOString().slice(0,10)}return d}
+const calWeek=r=>weekStart(r["Resolved (PHT)"].slice(0,10));
+const dt=k=>new Date(Date.UTC(+k.slice(0,4),+k.slice(5,7)-1,+k.slice(8,10)));
+const lbl=k=>{const d=dt(k);return `${String(d.getUTCMonth()+1).padStart(2,"0")}/${String(d.getUTCDate()).padStart(2,"0")}/${d.getUTCFullYear()} (${DN[d.getUTCDay()]})`};
+const weekStart=k=>{const d=dt(k);d.setUTCDate(d.getUTCDate()-d.getUTCDay());return d.toISOString().slice(0,10)};
+const wlabel=k=>{const a=dt(k),b=new Date(a);b.setUTCDate(b.getUTCDate()+6);return `${MN[a.getUTCMonth()]} ${a.getUTCDate()} – ${MN[b.getUTCMonth()]} ${b.getUTCDate()}`};
+const paid=r=>r.Paid==="yes",amt=r=>parseFloat(r["Amount USD"])||0;
+function save(){try{localStorage.setItem("paytracker.rows",JSON.stringify(rows));localStorage.setItem("paytracker.rate",rate);localStorage.setItem("paytracker.cfg",JSON.stringify({off,hrs,adj}))}catch(e){}}
+function load(){try{rows=JSON.parse(localStorage.getItem("paytracker.rows")||"[]");rate=parseFloat(localStorage.getItem("paytracker.rate"))||63.31;const c=JSON.parse(localStorage.getItem("paytracker.cfg")||"{}");off=c.off||off;hrs=c.hrs||8;adj=c.adj||{}}catch(e){rows=[]}}
+function key(r){return [r["Resolved (PHT)"],r["Conversation"],r["Interaction ID"]].join("|")}
+function doImport(text){const inc=parseCSV(text).filter(r=>r["Resolved (PHT)"]);
+if(!inc.length){alert("No valid rows found. Is this the pay-per-item CSV?");return}
+if(importMode==="replace")rows=inc;else{const m=new Map(rows.map(r=>[key(r),r]));inc.forEach(r=>m.set(key(r),r));rows=[...m.values()]}
+rows.sort((a,b)=>b["Resolved (PHT)"].localeCompare(a["Resolved (PHT)"]));save();render()}
+function render(){
+const weeks=[...new Set(rows.map(r=>calWeek(r)))].sort().reverse();
+$("week").innerHTML='<option value="all">All data</option>'+weeks.map(w=>`<option value="${w}">Week ${wlabel(w)}</option>`).join("");
+if(wk!=="all"&&!weeks.includes(wk))wk="all";$("week").value=wk;$("mode").value=mode;$("rate").value=rate;
+const out=$("out");
+if(!rows.length){out.innerHTML='<div class="empty">No data yet. Click <b>Import CSV</b> or drop your pay-per-item file anywhere on this page.</div>';return}
+const view=rows.filter(r=>wk==="all"||calWeek(r)===wk);
+const P=view.filter(paid),N=view.filter(r=>!paid(r)),total=P.reduce((s,r)=>s+amt(r),0);
+const days={};view.forEach(r=>{const k=dayKey(r);const d=days[k]??={p:0,n:0,usd:0};if(paid(r)){d.p++;d.usd+=amt(r)}else d.n++});
+const ks=Object.keys(days).sort();let cum=0;const prog=ks.map(k=>{cum+=days[k].usd;return{k,...days[k],cum}});
+const last=prog.length?prog[prog.length-1].k:null;
+const grp=(a,f)=>{const m={};a.forEach(r=>{const k=f(r)||"(none)";const g=m[k]??={c:0,u:0};g.c++;g.u+=amt(r)});return Object.entries(m).sort((a,b)=>b[1].c-a[1].c)};
+const bars=(e,max)=>'<div class="bars">'+e.map(([k,g])=>`<div class="r"><span class="t" title="${esc(k)}">${esc(k)}</span><span class="b"><i style="width:${max?g.c/max*100:0}%"></i></span><span class="x">${g.c} · ${usd(g.u)}</span></div>`).join("")+"</div>";
+const bt=grp(P,r=>r["Type of work"]),bl=grp(P,r=>r.Level),bc=grp(P,r=>r.Channel),bn=grp(N,r=>r.Reason);
+const worked=prog.filter(d=>!off.includes(dt(d.k).getUTCDay())).length,hourly=worked?total/(worked*hrs):0;
+const ad=adj[wk]||{cover:0,bonus:0},bonusAmt=total*(ad.bonus||0)/100,weekTotal=total+bonusAmt+(+ad.cover||0);
+const uniq=new Set(P.map(r=>r.Conversation)).size;
+const avg=prog.length?total/prog.length:0;
+const G={};rows.forEach(r=>{const k=r["Interaction ID"],g=G[k]??={n:0,u:0,rows:[]};g.n++;g.u+=amt(r);g.rows.push(r)});
+const isDup=r=>G[r["Interaction ID"]].n>1;
+const DU=view.filter(isDup),UN=view.filter(r=>!isDup(r)),duP=DU.filter(paid),unP=UN.filter(paid);
+const duTot=duP.reduce((s,r)=>s+amt(r),0),unTot=unP.reduce((s,r)=>s+amt(r),0),duIds=new Set(DU.map(r=>r["Interaction ID"])).size;
+const dm={};duP.forEach(r=>(dm[r["Interaction ID"]]??=[]).push(r));
+const rep1=duTot-Object.values(dm).reduce((s,a)=>s+amt(a.reduce((m,r)=>r["Resolved (PHT)"]<m["Resolved (PHT)"]?r:m)),0);
+let h=`<div class="grid">
+<div class="card hl"><div class="l">Total pay</div><div class="v">${usd(total)}</div><div class="s">${php(total*rate)}</div></div>
+<div class="card"><div class="l">Paid interactions</div><div class="v" style="color:var(--ok)">${P.length}</div><div class="s">avg ${P.length?usd(total/P.length):"$0.00"} each</div></div>
+<div class="card"><div class="l">Not paid</div><div class="v" style="color:var(--bad)">${N.length}</div><div class="s">${P.length+N.length?Math.round(N.length/(P.length+N.length)*100):0}% of all resolved</div></div>
+<div class="card"><div class="l">Shift</div><div class="v">${worked} day(s)</div><div class="s">${worked} day(s) worked · ${usd(hourly)} per hour on shift (${hrs}h/day)</div></div>
+<div class="card"><div class="l">Unique conversations</div><div class="v">${uniq}</div><div class="s">${P.length} paid rows · avg ${usd(avg)} per ${mode==="shift"?"shift":"day"}</div></div>
+<div class="card grn"><div class="l">Duplicate earnings</div><div class="v">${usd(duTot)}</div><div class="s">${php(duTot*rate)} · ${total?Math.round(duTot/total*100):0}% of total pay</div><div class="s">${duP.length} paid rows · ${duIds} repeated IDs · ${usd(rep1)} from repeats after the first</div></div>
+<div class="card"><div class="l">Unique earnings</div><div class="v">${usd(unTot)}</div><div class="s">${php(unTot*rate)} · ${unP.length} paid single-ID rows</div></div>
+${wk!=="all"?`<div class="card hl"><div class="l">Week so far (with extras)</div><div class="v">${usd(weekTotal)}</div><div class="s">${usd(total)} items + ${usd(+ad.cover||0)} queue cover + ${usd(bonusAmt)} bonus</div></div>`:""}</div>
+<h2>Pay progress (cumulative)</h2><div class="card scroll"><table><thead><tr><th>${mode==="shift"?"Date / shift":"Date"}</th><th class="n">Paid</th><th class="n">Not paid</th><th class="n">Cumulative (USD)</th><th class="n">PHP (₱${rate})</th><th class="n">Daily gain</th></tr></thead><tbody>`;
+[...prog].reverse().forEach(d=>{h+=`<tr class="${d.k===last?"now":""}"><td>${lbl(d.k)}${d.k===last?'<span class="badge b-now">latest</span>':""}</td><td class="n">${d.p}</td><td class="n">${d.n}</td><td class="n"><b>${usd(d.cum)}</b></td><td class="n mut">${php(d.cum*rate)}</td><td class="n gain">+${usd(d.usd)}</td></tr>`});
+h+=`<tr><td><b>GRAND TOTAL</b> (${prog.length} ${mode==="shift"?"shifts":"days"})</td><td class="n"><b>${P.length}</b></td><td class="n"><b>${N.length}</b></td><td class="n"><b>${usd(total)}</b></td><td class="n"><b>${php(total*rate)}</b></td><td class="n"><b>${P.length+N.length}</b></td></tr></tbody></table></div>`;
+h+=chart(prog);
+h+=`<h2>Breakdown</h2><div class="two"><div class="card"><div class="l">Paid by type of work</div>${bars(bt,Math.max(...bt.map(e=>e[1].c),0))}</div><div class="card"><div class="l">Paid by level</div>${bars(bl,Math.max(...bl.map(e=>e[1].c),0))}<div class="l" style="margin-top:14px">Paid by channel</div>${bars(bc,Math.max(...bc.map(e=>e[1].c),0))}</div><div class="card"><div class="l">Why not paid</div>${bn.length?bars(bn,Math.max(...bn.map(e=>e[1].c))):'<div class="mut">Nothing unpaid 🎉</div>'}</div></div>`;
+const chips=[["all","All Records",view.length],["dup","Duplicates Only",DU.length,"g"],["uni","Unique Only",UN.length],["paid","Paid",P.length],["no","Unpaid",N.length],["disp","Disputed",view.filter(r=>r.Dispute).length]];
+const cols=gmode==="rows"?[["t","Resolved (PHT)"],["i","Interaction ID"],["n","Duplicate"],["g","Agent"],["c","Channel"],["p","Paid?"],["l","Level"],["a","Amount","n"],["r","Reason / type"]]:[["i","Interaction ID"],["y","Type"],["n","Rows","n"],["a","Paid USD","n"],["t","Latest (PHT)"]];
+h+=`<h2>Interactions</h2><div class="bar chips">${chips.map(([k,n,c,g])=>`<button class="chip ${g||""} ${fsel===k?"on":""}" data-f="${k}">${n}<b>${c}</b></button>`).join("")}</div><div class="bar"><span class="mut">Group</span><select id="gm"><option value="rows">Individual rows</option><option value="id">By Interaction ID</option><option value="split">Duplicate IDs vs Unique</option></select><input id="q" placeholder="Search ID, conversation, type, reason…" style="min-width:260px" value="${esc(q)}"></div><div class="card scroll"><table><thead><tr>${cols.map(([k,n,c])=>`<th class="${c||""} sortable" data-k="${k}" style="cursor:pointer">${n}${sortK===k?(sortD>0?" ▲":" ▼"):""}</th>`).join("")}${gmode==="rows"?"<th></th>":""}</tr></thead><tbody id="tb"></tbody></table><div class="s mut" id="cnt"></div></div>`;
+out.innerHTML=h;$("gm").value=gmode;
+const fl={all:()=>true,dup:isDup,uni:r=>!isDup(r),paid,no:r=>!paid(r),disp:r=>r.Dispute};
+const sv={t:r=>r["Resolved (PHT)"],c:r=>r.Channel,g:r=>r.Agent,p:r=>paid(r)?1:0,l:r=>r.Level,a:amt,i:r=>r["Interaction ID"],n:r=>G[r["Interaction ID"]].n,r:r=>paid(r)?r["Type of work"]:r.Reason};
+const sg={t:g=>g.last,i:g=>g.k,y:g=>g.n>1?1:0,n:g=>g.c,a:g=>g.usd};
+const cmp=g=>(a,b)=>{const x=g(a),y=g(b);return(typeof x==="number"?x-y:String(x??"").localeCompare(String(y??""),undefined,{numeric:true}))*sortD};
+const cpb=k=>`<button class="cp" data-id="${esc(k)}" style="padding:2px 8px;font-size:12px">Copy</button>`;
+const dbadge=k=>{const g=G[k];return g.n>1?`<span class="badge b-dup" title="Appears ${g.n} times in all data">×${g.n} · ${usd(g.u)}</span>`+(k.includes(",")||g.rows.some(r=>!paid(r))?`<span class="badge b-warn" title="Combined IDs or includes an unpaid row">!</span>`:""):""};
+const lk=r=>r["Front link"]?`<a href="${esc(r["Front link"])}" target="_blank" rel="noopener">Open</a>`:"";
+const gr=g=>{const d=g.n>1,o=opn[g.k];let s=`<tr class="gr ${d?"dup":""}" data-k="${esc(g.k)}"><td>${o?"▾":"▸"} ${esc(g.k)} ${cpb(g.k)}${dbadge(g.k)}</td><td><span class="badge ${d?"b-dup":"b-uni"}">${d?"Duplicate":"Unique"}</span></td><td class="n">${g.c}</td><td class="n ${d?"gain":""}">${usd(g.usd)}</td><td class="mut">${esc(g.last)}</td></tr>`;
+if(o)s+=[...g.rows].sort((a,b)=>b["Resolved (PHT)"].localeCompare(a["Resolved (PHT)"])).map(r=>`<tr class="subr"><td class="mut">${esc(r["Resolved (PHT)"])} · ${esc(r.Agent)}</td><td><span class="badge ${paid(r)?"b-ok":"b-no"}">${paid(r)?"Paid":"Not paid"}</span></td><td class="mut">${esc(paid(r)?r["Type of work"]:r.Reason)}</td><td class="n">${usd(amt(r))}</td><td>${lk(r)}</td></tr>`).join("");return s};
+const draw=()=>{const ql=q.toLowerCase();const f=view.filter(r=>fl[fsel](r)&&(!ql||Object.values(r).join(" ").toLowerCase().includes(ql)));let html="",n=f.length,shown;
+if(gmode==="rows"){f.sort(cmp(sv[sortK]||sv.t));shown=Math.min(n,300);html=f.slice(0,300).map(r=>{const k=r["Interaction ID"];return `<tr class="${G[k].n>1?"dup":""}"><td>${esc(r["Resolved (PHT)"])}</td><td>${esc(k)} ${cpb(k)}</td><td>${dbadge(k)||'<span class="mut">—</span>'}</td><td>${esc(r.Agent)}</td><td>${esc(r.Channel)}</td><td><span class="badge ${paid(r)?"b-ok":"b-no"}">${paid(r)?"Paid":"Not paid"}</span></td><td class="mut">${esc(r.Level)}</td><td class="n">${usd(amt(r))}</td><td class="mut">${esc(paid(r)?r["Type of work"]:r.Reason)}${r.Dispute?" ⚑":""}</td><td>${lk(r)}</td></tr>`}).join("")}
+else{const m={};f.forEach(r=>{const k=r["Interaction ID"],g=m[k]??={k,n:G[k].n,c:0,usd:0,last:"",rows:[]};g.c++;g.usd+=amt(r);g.rows.push(r);if(r["Resolved (PHT)"]>g.last)g.last=r["Resolved (PHT)"]});
+const ga=Object.values(m).sort(cmp(sg[sortK]||sg.t));n=ga.length;shown=Math.min(n,300);
+if(gmode==="split")[["Duplicate IDs",ga.filter(g=>g.n>1),1],["Unique IDs",ga.filter(g=>g.n<2),0]].forEach(([t,a,d])=>{html+=`<tr class="sec ${d?"dup":""}"><td colspan="5"><b>${t}</b> · ${a.length} IDs · ${a.reduce((s,g)=>s+g.c,0)} rows · <b>${usd(a.reduce((s,g)=>s+g.usd,0))}</b></td></tr>`+a.slice(0,150).map(gr).join("")});else html=ga.slice(0,300).map(gr).join("")}
+$("tb").innerHTML=html;$("cnt").textContent=`Showing ${shown} of ${n} ${gmode==="rows"?"rows":"IDs"}`};
+document.querySelectorAll("th.sortable").forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(sortK===k)sortD*=-1;else{sortK=k;sortD="tan".includes(k)?-1:1}render()});
+document.querySelectorAll(".chip").forEach(b=>b.onclick=()=>{fsel=b.dataset.f;render()});
+$("gm").onchange=e=>{gmode=e.target.value;render()};
+$("tb").onclick=e=>{const b=e.target.closest(".cp");if(!b){const r=e.target.closest("tr.gr");if(r&&!e.target.closest("a")){opn[r.dataset.k]=!opn[r.dataset.k];draw()}return}const t=b.dataset.id,done=()=>{b.textContent="Copied ✓";setTimeout(()=>b.textContent="Copy",1200)};
+const fb=()=>{const x=document.createElement("textarea");x.value=t;document.body.appendChild(x);x.select();try{document.execCommand("copy");done()}catch(_){}x.remove()};
+navigator.clipboard?navigator.clipboard.writeText(t).then(done,fb):fb()};
+draw();$("q").oninput=e=>{q=e.target.value;draw()}}
+function chart(p){if(p.length<2)return"";const W=700,H=200,m=34,mx=Math.max(...p.map(d=>d.cum))||1;
+const x=i=>m+i*(W-m-10)/(p.length-1),y=v=>H-24-v/mx*(H-44);
+const pts=p.map((d,i)=>`${x(i)},${y(d.cum)}`).join(" ");
+return `<h2>Trend</h2><div class="card"><svg viewBox="0 0 ${W} ${H}" width="100%"><polyline fill="none" stroke="#facc15" stroke-width="2.5" points="${pts}"/>${p.map((d,i)=>`<circle cx="${x(i)}" cy="${y(d.cum)}" r="4" fill="#facc15"/><text x="${x(i)}" y="${H-6}" text-anchor="middle">${d.k.slice(5)}</text><text x="${x(i)}" y="${y(d.cum)-9}" text-anchor="middle">$${d.cum.toFixed(0)}</text>`).join("")}</svg></div>`}
+$("bImp").onclick=()=>{importMode="merge";$("file").click()};
+$("bRep").onclick=()=>{importMode="replace";$("file").click()};
+$("file").onchange=e=>{const f=e.target.files[0];if(f)f.text().then(doImport);e.target.value=""};
+$("bExp").onclick=()=>{if(!rows.length)return;const v=rows.filter(r=>wk==="all"||calWeek(r)===wk);
+const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([toCSV(v)],{type:"text/csv"}));a.download=`pay-per-item-${new Date().toISOString().slice(0,10)}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
+$("bClr").onclick=()=>{if(confirm("Delete all stored data in this browser? Export first if unsure.")){rows=[];save();render()}};
+$("week").onchange=e=>{wk=e.target.value;render()};$("mode").onchange=e=>{mode=e.target.value;wk="all";render()};
+$("rate").onchange=e=>{rate=parseFloat(e.target.value)||63.31;save();render()};
+addEventListener("dragover",e=>{e.preventDefault();document.body.classList.add("drop")});
+addEventListener("dragleave",()=>document.body.classList.remove("drop"));
+addEventListener("drop",e=>{e.preventDefault();document.body.classList.remove("drop");const f=e.dataTransfer.files[0];if(f){importMode="merge";f.text().then(doImport)}});
+function cfg(){$("cfg").innerHTML='Days off: '+DN.map((n,i)=>`<label><input type="checkbox" data-d="${i}" ${off.includes(i)?"checked":""}> ${n}</label>`).join(" ")+' · Hours/shift <input id="hrs" type="number" step="0.5" style="width:70px" value="'+hrs+'">'+(wk!=="all"?' · Queue cover $ <input id="cov" type="number" step="0.01" style="width:80px" value="'+((adj[wk]||{}).cover||0)+'"> Top-shift bonus % <input id="bon" type="number" step="1" style="width:70px" value="'+((adj[wk]||{}).bonus||0)+'">':"");
+document.querySelectorAll("#cfg [data-d]").forEach(c=>c.onchange=()=>{off=[...document.querySelectorAll("#cfg [data-d]")].filter(x=>x.checked).map(x=>+x.dataset.d);save();render()});
+$("hrs").onchange=e=>{hrs=parseFloat(e.target.value)||8;save();render()};
+if($("cov")){const u=()=>{adj[wk]={cover:parseFloat($("cov").value)||0,bonus:parseFloat($("bon").value)||0};save();render()};$("cov").onchange=u;$("bon").onchange=u}}
+const _r=render;render=function(){_r();cfg()};
+load();render();
+</script></body></html>
